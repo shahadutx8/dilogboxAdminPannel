@@ -387,6 +387,102 @@ app.put('/api/panel/:apiKey/password', requireAppAuth, async (req, res) => {
   res.json({ success: true });
 });
 
+// ── Panel: Analytics ───────────────────────────────────────────────────────────
+app.get('/api/panel/:apiKey/analytics', requireAppAuth, async (req, res) => {
+  const appId = req.appId;
+  const { rows: totalRow } = await db.query('SELECT COUNT(*) AS total FROM device_hits WHERE app_id = $1', [appId]);
+  const { rows: todayRow } = await db.query(
+    "SELECT COUNT(*) AS today FROM device_hits WHERE app_id = $1 AND hit_at >= NOW() - INTERVAL '24 hours'", [appId]
+  );
+  const { rows: hourly } = await db.query(
+    `SELECT date_trunc('hour', hit_at) AS hour, COUNT(*) AS count
+     FROM device_hits WHERE app_id = $1 AND hit_at >= NOW() - INTERVAL '24 hours'
+     GROUP BY hour ORDER BY hour ASC`, [appId]
+  );
+  const { rows: recent } = await db.query(
+    `SELECT dh.id, dh.ip, dh.user_agent, dh.hit_at,
+            (fi.ip IS NOT NULL) AS flagged
+     FROM device_hits dh
+     LEFT JOIN flagged_ips fi ON fi.app_id = dh.app_id AND fi.ip = dh.ip
+     WHERE dh.app_id = $1 ORDER BY dh.hit_at DESC LIMIT 50`, [appId]
+  );
+  res.json({ total: parseInt(totalRow[0].total), today: parseInt(todayRow[0].today), hourly, recent });
+});
+
+app.get('/api/panel/:apiKey/analytics/stream', (req, res, next) => {
+  if (req.query.token && !req.headers.authorization) req.headers.authorization = 'Bearer ' + req.query.token;
+  next();
+}, requireAppAuth, (req, res) => {
+  const appId = parseInt(req.appId);
+  res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive', 'X-Accel-Buffering': 'no' });
+  res.flushHeaders();
+  res.write(': connected\n\n');
+  if (!analyticsClients.has(appId)) analyticsClients.set(appId, new Set());
+  analyticsClients.get(appId).add(res);
+  const keepAlive = setInterval(() => { try { res.write(': ping\n\n'); } catch {} }, 25000);
+  req.on('close', () => { clearInterval(keepAlive); const s = analyticsClients.get(appId); if (s) s.delete(res); });
+});
+
+// ── Panel: Flagged IPs ─────────────────────────────────────────────────────────
+app.get('/api/panel/:apiKey/flagged-ips', requireAppAuth, async (req, res) => {
+  const { rows } = await db.query(
+    'SELECT id, ip, reason, flagged_at FROM flagged_ips WHERE app_id = $1 ORDER BY flagged_at DESC', [req.appId]
+  );
+  res.json(rows);
+});
+
+app.post('/api/panel/:apiKey/flagged-ips', requireAppAuth, async (req, res) => {
+  const { ip, reason } = req.body;
+  if (!ip || !ip.trim()) return res.status(400).json({ error: 'IP required' });
+  try {
+    const { rows } = await db.query(
+      'INSERT INTO flagged_ips (app_id, ip, reason) VALUES ($1, $2, $3) ON CONFLICT (app_id, ip) DO UPDATE SET reason=$3, flagged_at=NOW() RETURNING id, ip, reason, flagged_at',
+      [req.appId, ip.trim(), (reason || '').trim()]
+    );
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/panel/:apiKey/flagged-ips/:ip', requireAppAuth, async (req, res) => {
+  await db.query('DELETE FROM flagged_ips WHERE app_id = $1 AND ip = $2', [req.appId, req.params.ip]);
+  res.json({ success: true });
+});
+
+// ── Panel: Messages ────────────────────────────────────────────────────────────
+app.get('/api/panel/:apiKey/messages', requireAppAuth, async (req, res) => {
+  const { rows } = await db.query(
+    'SELECT id, message, sort_order FROM dialog_messages WHERE app_id = $1 ORDER BY sort_order ASC, id ASC', [req.appId]
+  );
+  res.json(rows);
+});
+
+app.post('/api/panel/:apiKey/messages', requireAppAuth, async (req, res) => {
+  const { message } = req.body;
+  if (!message || !message.trim()) return res.status(400).json({ error: 'Message required' });
+  const { rows: maxRow } = await db.query('SELECT COALESCE(MAX(sort_order),0) AS mx FROM dialog_messages WHERE app_id=$1', [req.appId]);
+  const { rows } = await db.query(
+    'INSERT INTO dialog_messages (app_id, message, sort_order) VALUES ($1,$2,$3) RETURNING id, message, sort_order',
+    [req.appId, message.trim(), parseInt(maxRow[0].mx) + 1]
+  );
+  res.json(rows[0]);
+});
+
+app.put('/api/panel/:apiKey/messages/:msgId', requireAppAuth, async (req, res) => {
+  const { message } = req.body;
+  if (!message || !message.trim()) return res.status(400).json({ error: 'Message required' });
+  const { rows } = await db.query(
+    'UPDATE dialog_messages SET message=$1 WHERE id=$2 AND app_id=$3 RETURNING id, message, sort_order',
+    [message.trim(), req.params.msgId, req.appId]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Not found' });
+  res.json(rows[0]);
+});
+
+app.delete('/api/panel/:apiKey/messages/:msgId', requireAppAuth, async (req, res) => {
+  await db.query('DELETE FROM dialog_messages WHERE id=$1 AND app_id=$2', [req.params.msgId, req.appId]);
+  res.json({ success: true });
+});
+
 // ── Messages CRUD (super admin) ───────────────────────────────────────────────
 app.get('/api/admin/apps/:id/messages', requireSuperAuth, async (req, res) => {
   const { rows } = await db.query(

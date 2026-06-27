@@ -15,8 +15,8 @@
 
   .form-group { margin-bottom: 16px; }
   .form-group label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-  .form-group input { width: 100%; padding: 11px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f1f5f9; font-size: 14px; outline: none; transition: border-color 0.2s; }
-  .form-group input:focus { border-color: #3b82f6; }
+  .form-group input, .form-group textarea { width: 100%; padding: 11px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f1f5f9; font-size: 14px; outline: none; transition: border-color 0.2s; font-family: inherit; }
+  .form-group input:focus, .form-group textarea:focus { border-color: #3b82f6; }
 
   .btn { padding: 10px 18px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
   .btn-full { width: 100%; }
@@ -27,7 +27,10 @@
   .btn-danger:hover { background: #dc2626; }
   .btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #334155; }
   .btn-ghost:hover { background: #1e293b; color: #e2e8f0; }
-  .btn-sm { padding: 7px 13px; font-size: 12px; }
+  .btn-success { background: #22c55e; color: #fff; }
+  .btn-success:hover { background: #16a34a; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-xs { padding: 4px 9px; font-size: 11px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
 
   .error-msg { background: #450a0a; border: 1px solid #ef4444; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #fca5a5; margin-top: 12px; }
   .success-msg { background: #052e16; border: 1px solid #22c55e; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #86efac; margin-top: 12px; }
@@ -42,7 +45,7 @@
   .logout-btn:hover { background: #475569; }
 
   .main { padding: 22px; }
-  .content { max-width: 560px; margin: 0 auto; }
+  .content { max-width: 620px; margin: 0 auto; }
 
   .section { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
   .section-title { font-size: 14px; font-weight: 600; color: #f1f5f9; margin-bottom: 3px; }
@@ -72,6 +75,63 @@
   .pw-form .form-group input { padding: 9px 12px; font-size: 13px; }
 
   .api-url-box { background: #0f172a; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 11px; color: #38bdf8; word-break: break-all; }
+
+  /* ── Analytics ── */
+  .stat-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .stat-card { background: #0f172a; border-radius: 10px; padding: 14px 16px; }
+  .stat-label { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-value { font-size: 28px; font-weight: 700; color: #38bdf8; }
+
+  .chart-wrap { background: #0f172a; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+  .chart-wrap-label { font-size: 11px; color: #64748b; margin-bottom: 10px; font-weight: 600; }
+  .chart-bars { display: flex; align-items: flex-end; gap: 3px; height: 60px; overflow-x: auto; }
+  .chart-bar-col { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 28px; }
+  .chart-bar { width: 20px; background: #3b82f6; border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.3s; }
+  .chart-bar-label { font-size: 9px; color: #475569; }
+  .chart-empty { font-size: 12px; color: #475569; text-align: center; padding: 16px 0; }
+
+  .hit-feed-wrap { background: #0f172a; border-radius: 10px; overflow: hidden; }
+  .hit-feed-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #1e293b; }
+  .hit-feed-header span { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; }
+  #hit-feed { max-height: 280px; overflow-y: auto; }
+  .hit-row { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid #1e293b; font-size: 12px; flex-wrap: wrap; }
+  .hit-row:last-child { border-bottom: none; }
+  .hit-row.new-hit { animation: flashNew 1.2s ease; }
+  .hit-row.is-flagged { background: rgba(239,68,68,0.07); }
+  @keyframes flashNew { 0%{background:#1e3a5f} 100%{background:transparent} }
+  .hit-ip { font-family: monospace; font-size: 12px; color: #38bdf8; min-width: 110px; }
+  .hit-ip.flagged-ip { color: #ef4444; }
+  .flag-badge { font-size: 9px; background: #ef4444; color: #fff; border-radius: 4px; padding: 1px 5px; margin-left: 5px; font-weight: 700; }
+  .hit-ua { flex: 1; color: #64748b; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .hit-time { font-size: 11px; color: #475569; white-space: nowrap; }
+  .no-hits { font-size: 12px; color: #475569; text-align: center; padding: 20px; }
+  .btn-flag { background: #7c2d12; color: #fb923c; border: none; border-radius: 5px; padding: 3px 8px; font-size: 11px; cursor: pointer; font-weight: 600; }
+  .btn-flag:hover { background: #9a3412; }
+  .btn-unflag { background: #052e16; color: #4ade80; border: none; border-radius: 5px; padding: 3px 8px; font-size: 11px; cursor: pointer; font-weight: 600; }
+  .btn-unflag:hover { background: #14532d; }
+
+  /* ── Flagged IPs ── */
+  .flagged-row { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid #0f172a; font-size: 12px; flex-wrap: wrap; }
+  .flagged-row:last-child { border-bottom: none; }
+  .flagged-row-ip { font-family: monospace; color: #ef4444; font-weight: 600; min-width: 120px; }
+  .flagged-row-reason { flex: 1; color: #94a3b8; font-size: 12px; }
+  .flagged-row-time { font-size: 11px; color: #475569; white-space: nowrap; }
+  .no-flagged { font-size: 12px; color: #475569; text-align: center; padding: 16px 0; }
+  .manual-flag-form { background: #0f172a; border-radius: 10px; padding: 14px; margin-top: 14px; display: none; }
+  .manual-flag-form .form-group { margin-bottom: 10px; }
+  .manual-flag-form .form-group input { padding: 9px 12px; font-size: 13px; }
+  .manual-flag-form .form-group label { font-size: 11px; }
+  .mf-btns { display: flex; gap: 8px; }
+  .mf-btns button { flex: 1; }
+
+  /* ── Messages ── */
+  .msg-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #0f172a; border-radius: 8px; margin-bottom: 8px; }
+  .msg-text { flex: 1; font-size: 13px; color: #cbd5e1; }
+  .msg-text.editing input { width: 100%; background: #1e293b; border: 1px solid #3b82f6; border-radius: 6px; padding: 5px 8px; color: #f1f5f9; font-size: 13px; outline: none; }
+  .msg-add-form { display: flex; gap: 8px; margin-top: 12px; }
+  .msg-add-form input { flex: 1; padding: 9px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f1f5f9; font-size: 13px; outline: none; }
+  .msg-add-form input:focus { border-color: #3b82f6; }
+  .no-messages { font-size: 12px; color: #475569; text-align: center; padding: 14px 0; }
 </style>
 </head>
 <body>
@@ -96,7 +156,7 @@
 <div id="dashboard-page">
   <div class="topbar">
     <div class="topbar-left">
-      <div class="h1" id="topbar-app-name" style="font-size:15px;font-weight:700;color:#f8fafc">App Panel</div>
+      <div style="font-size:15px;font-weight:700;color:#f8fafc" id="topbar-app-name">App Panel</div>
       <div class="app-label" id="topbar-username"></div>
     </div>
     <div class="topbar-right">
@@ -107,6 +167,7 @@
 
   <div class="main">
     <div class="content">
+
       <!-- Dialog Status -->
       <div class="section">
         <div class="section-title">Dialog Status</div>
@@ -126,10 +187,67 @@
         <div id="save-msg" style="display:none"></div>
       </div>
 
+      <!-- Analytics -->
+      <div class="section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+          <div class="section-title">📊 Analytics</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAnalytics()">↻ Refresh</button>
+        </div>
+        <div class="section-sub">Android device hit tracking — real-time</div>
+
+        <div class="stat-cards">
+          <div class="stat-card"><div class="stat-label">মোট Hit</div><div class="stat-value" id="stat-total">—</div></div>
+          <div class="stat-card"><div class="stat-label">আজকের Hit</div><div class="stat-value" id="stat-today">—</div></div>
+        </div>
+
+        <div class="chart-wrap">
+          <div class="chart-wrap-label">গত ২৪ ঘণ্টা (per hour)</div>
+          <div id="analytics-chart" class="chart-empty">Loading...</div>
+        </div>
+
+        <div class="hit-feed-wrap">
+          <div class="hit-feed-header">
+            <span>সর্বশেষ Hits</span>
+            <span id="live-dot" style="color:#22c55e;font-size:11px">● Live</span>
+          </div>
+          <div id="hit-feed"><div class="no-hits">Loading...</div></div>
+        </div>
+
+        <!-- Flagged IPs subsection -->
+        <div style="margin-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:13px;font-weight:600;color:#f1f5f9">🚨 Flagged IPs <span id="flagged-count" style="font-size:11px;color:#64748b;font-weight:400"></span></div>
+            <button class="btn btn-xs" style="background:#7c2d12;color:#fb923c" onclick="openManualFlag()">+ Manual Flag</button>
+          </div>
+          <div id="flagged-list"><div class="no-flagged">Loading...</div></div>
+          <div class="manual-flag-form" id="manual-flag-form">
+            <div class="form-group"><label>IP Address</label><input type="text" id="manual-flag-ip" placeholder="e.g. 103.1.2.3"></div>
+            <div class="form-group"><label>কারণ (optional)</label><input type="text" id="manual-flag-reason" placeholder="প্রতারণামূলক অ্যাকাউন্ট"></div>
+            <div id="manual-flag-msg" style="display:none;margin-bottom:10px;font-size:12px;padding:8px 12px;border-radius:6px"></div>
+            <div class="mf-btns">
+              <button class="btn btn-danger btn-sm" onclick="submitManualFlag()">🚩 Flag IP</button>
+              <button class="btn btn-ghost btn-sm" onclick="closeManualFlag()">বাতিল</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="section">
+        <div class="section-title">💬 Dialog Messages</div>
+        <div class="section-sub">Dialog-এর নিচে যে messages দেখাবে</div>
+        <div id="messages-container"><div class="no-messages">Loading...</div></div>
+        <div class="msg-add-form">
+          <input type="text" id="new-msg-input" placeholder="নতুন message লিখুন..." onkeydown="if(event.key==='Enter')addMessage()">
+          <button class="btn btn-primary btn-sm" onclick="addMessage()">+ যোগ করুন</button>
+        </div>
+        <div id="msg-status" style="display:none;margin-top:10px;font-size:12px;padding:8px 12px;border-radius:6px"></div>
+      </div>
+
       <!-- Android Config URL -->
       <div class="section">
         <div class="section-title">📡 Android Config URL</div>
-        <div class="section-sub">এই URL টা smali কোডের CONFIG_URL field-এ দিন</div>
+        <div class="section-sub">Smali কোডের CONFIG_URL field-এ এই URL দিন</div>
         <div class="api-url-box" id="config-url-box"></div>
         <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="copyUrl()">📋 Copy URL</button>
       </div>
@@ -146,20 +264,34 @@
           <div id="pw-msg" style="display:none"></div>
         </div>
       </div>
+
     </div>
   </div>
 </div>
 
 <script>
-// Extract api_key from URL path: /panel/:apiKey/
 const pathParts = window.location.pathname.split('/').filter(Boolean);
 const API_KEY = pathParts[1] || '';
 const BASE = window.location.origin + '/api/panel/' + API_KEY;
+const configUrl = window.location.origin + '/api/dialog/config/' + API_KEY;
 
 let TOKEN = sessionStorage.getItem('app_token_' + API_KEY) || '';
 let configData = [];
+let analyticsData = { total: 0, today: 0, hourly: [], recent: [] };
+let flaggedIps = [];
+let messages = [];
+let analyticsSSE = null;
 
-const FIELD_KEYS = ['show_device_id','show_device_name','show_model','show_android','show_imei','show_last_url','show_ipv4','show_ipv6','show_ipv6_check'];
+const FIELD_KEYS = ['dialog_enabled','show_device_id','show_device_name','show_model','show_android','show_imei','show_last_url','show_ipv4','show_ipv6','show_ipv6_check','hide_when_offline'];
+
+document.getElementById('config-url-box').textContent = configUrl;
+
+if (!API_KEY) {
+  document.getElementById('app-name-display').textContent = 'Invalid URL';
+  document.getElementById('login-btn').disabled = true;
+}
+
+function esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 function api(path, method = 'GET', body = null) {
   return fetch(BASE + path, {
@@ -167,15 +299,6 @@ function api(path, method = 'GET', body = null) {
     headers: { 'Content-Type': 'application/json', ...(TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {}) },
     ...(body !== null ? { body: JSON.stringify(body) } : {})
   });
-}
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-const configUrl = window.location.origin + '/api/dialog/config/' + API_KEY;
-document.getElementById('config-url-box').textContent = configUrl;
-
-if (!API_KEY) {
-  document.getElementById('app-name-display').textContent = 'Invalid URL';
-  document.getElementById('login-btn').disabled = true;
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -187,10 +310,7 @@ async function doLogin() {
     const r = await fetch(window.location.origin + '/api/panel/' + API_KEY + '/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: document.getElementById('login-user').value,
-        password: document.getElementById('login-pass').value
-      })
+      body: JSON.stringify({ username: document.getElementById('login-user').value, password: document.getElementById('login-pass').value })
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Login failed');
@@ -208,6 +328,7 @@ async function doLogin() {
 document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
 function doLogout() {
+  if (analyticsSSE) { try { analyticsSSE.close(); } catch {} analyticsSSE = null; }
   TOKEN = '';
   sessionStorage.removeItem('app_token_' + API_KEY);
   sessionStorage.removeItem('app_user_' + API_KEY);
@@ -215,7 +336,7 @@ function doLogout() {
   document.getElementById('dashboard-page').style.display = 'none';
   document.getElementById('login-page').style.display = 'flex';
   document.getElementById('login-pass').value = '';
-  configData = [];
+  configData = []; flaggedIps = []; messages = [];
 }
 
 function showDashboard(username, appName) {
@@ -226,6 +347,10 @@ function showDashboard(username, appName) {
   document.getElementById('topbar-username').textContent = 'Logged in as: ' + username;
   document.title = (appName || 'App') + ' Admin Panel';
   loadConfig();
+  loadAnalytics();
+  loadFlaggedIps();
+  loadMessages();
+  connectAnalyticsSSE();
 }
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -240,7 +365,7 @@ async function loadConfig() {
 
 function renderConfig() {
   const master = configData.find(c => c.key === 'dialog_enabled');
-  const fields  = configData.filter(c => FIELD_KEYS.includes(c.key));
+  const fields  = configData.filter(c => FIELD_KEYS.includes(c.key) && c.key !== 'dialog_enabled');
 
   const masterEl = document.getElementById('master-container');
   masterEl.innerHTML = master ? `
@@ -258,7 +383,7 @@ function renderConfig() {
 
 function toggleMaster(el) {
   const on = el.checked;
-  FIELD_KEYS.forEach(k => { const t = document.getElementById('toggle_'+k); if (t) t.checked = on; });
+  FIELD_KEYS.filter(k => k !== 'dialog_enabled').forEach(k => { const t = document.getElementById('toggle_'+k); if (t) t.checked = on; });
   saveConfig();
 }
 
@@ -277,9 +402,258 @@ async function saveConfig() {
   setTimeout(() => saveMsg.style.display = 'none', 3000);
 }
 
+// ── Analytics ─────────────────────────────────────────────────────────────────
+async function loadAnalytics() {
+  try {
+    const r = await api('/analytics');
+    if (!r.ok) return;
+    analyticsData = await r.json();
+    updateAnalyticsUI();
+  } catch {}
+}
+
+function updateAnalyticsUI() {
+  const totalEl = document.getElementById('stat-total');
+  const todayEl = document.getElementById('stat-today');
+  if (totalEl) totalEl.textContent = analyticsData.total.toLocaleString();
+  if (todayEl) todayEl.textContent = analyticsData.today.toLocaleString();
+  renderAnalyticsChart(analyticsData.hourly);
+  renderHitFeed(analyticsData.recent, false);
+}
+
+function renderAnalyticsChart(hourly) {
+  const el = document.getElementById('analytics-chart');
+  if (!el) return;
+  if (!hourly || !hourly.length) { el.className = 'chart-empty'; el.textContent = 'এখনো কোনো hit নেই'; return; }
+  el.className = 'chart-bars';
+  const max = Math.max(...hourly.map(h => parseInt(h.count)), 1);
+  el.innerHTML = hourly.map(h => {
+    const count = parseInt(h.count);
+    const pct = Math.max((count / max) * 54, 2);
+    const label = new Date(h.hour).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return `<div class="chart-bar-col" title="${label}: ${count} hits">
+      <div class="chart-bar" style="height:${pct}px"></div>
+      <div class="chart-bar-label">${label.slice(0,5)}</div>
+    </div>`;
+  }).join('');
+}
+
+function isFlaggedIp(ip) { return flaggedIps.some(f => f.ip === ip); }
+
+function hitRowHTML(h, isNew) {
+  const time = new Date(h.hit_at);
+  const timeStr = time.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const dateStr = time.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+  const ua = h.user_agent || 'Unknown';
+  const shortUA = ua.length > 40 ? ua.slice(0, 40) + '…' : ua;
+  const flagged = h.flagged || isFlaggedIp(h.ip);
+  const ipForJs = (h.ip || '').replace(/'/g, "\\'");
+  const flagBtn = flagged
+    ? `<button class="btn-unflag" onclick="unflagIp('${ipForJs}')">✓ Unflag</button>`
+    : `<button class="btn-flag" onclick="flagIp('${ipForJs}')">🚩 Flag</button>`;
+  const flagBadge = flagged ? `<span class="flag-badge">FLAGGED</span>` : '';
+  return `<div class="hit-row${isNew?' new-hit':''}${flagged?' is-flagged':''}">
+    <span class="hit-ip${flagged?' flagged-ip':''}">${esc(h.ip||'?')}${flagBadge}</span>
+    <span class="hit-ua" title="${esc(ua)}">${esc(shortUA)}</span>
+    <span class="hit-time">${dateStr} ${timeStr}</span>
+    ${flagBtn}
+  </div>`;
+}
+
+function renderHitFeed(hits, prepend) {
+  const el = document.getElementById('hit-feed');
+  if (!el) return;
+  if (!hits || !hits.length) { el.innerHTML = '<div class="no-hits">এখনো কোনো hit নেই — Android device config fetch করলে এখানে দেখাবে</div>'; return; }
+  if (!prepend) {
+    el.innerHTML = hits.map(h => hitRowHTML(h, false)).join('');
+  } else {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = hitRowHTML(hits[0], true);
+    el.insertBefore(wrap.firstElementChild, el.firstChild);
+    const rows = el.querySelectorAll('.hit-row');
+    if (rows.length > 50) rows[rows.length - 1].remove();
+  }
+}
+
+function connectAnalyticsSSE() {
+  if (analyticsSSE) { try { analyticsSSE.close(); } catch {} analyticsSSE = null; }
+  if (!TOKEN) return;
+  const es = new EventSource(`${BASE}/analytics/stream?token=${encodeURIComponent(TOKEN)}`);
+  analyticsSSE = es;
+  es.onmessage = (e) => {
+    try {
+      const hit = JSON.parse(e.data);
+      analyticsData.total++; analyticsData.today++;
+      const st = document.getElementById('stat-total'); const sd = document.getElementById('stat-today');
+      if (st) st.textContent = analyticsData.total.toLocaleString();
+      if (sd) sd.textContent = analyticsData.today.toLocaleString();
+      renderHitFeed([hit], true);
+      const nowHour = new Date(); nowHour.setMinutes(0,0,0);
+      const existing = analyticsData.hourly.find(h => new Date(h.hour).getTime() === nowHour.getTime());
+      if (existing) existing.count = parseInt(existing.count) + 1;
+      else analyticsData.hourly.push({ hour: nowHour.toISOString(), count: 1 });
+      renderAnalyticsChart(analyticsData.hourly);
+    } catch {}
+  };
+  es.onerror = () => { try { es.close(); } catch {} document.getElementById('live-dot').style.color = '#ef4444'; };
+}
+
+// ── Flagged IPs ───────────────────────────────────────────────────────────────
+async function loadFlaggedIps() {
+  try {
+    const r = await api('/flagged-ips');
+    if (!r.ok) return;
+    flaggedIps = await r.json();
+    renderFlaggedIps();
+    if (analyticsData.recent.length) renderHitFeed(analyticsData.recent, false);
+  } catch {}
+}
+
+function renderFlaggedIps() {
+  const listEl = document.getElementById('flagged-list');
+  const countEl = document.getElementById('flagged-count');
+  if (!listEl) return;
+  if (countEl) countEl.textContent = flaggedIps.length ? `(${flaggedIps.length}টি)` : '';
+  if (!flaggedIps.length) { listEl.innerHTML = '<div class="no-flagged">কোনো flagged IP নেই — Hit feed থেকে 🚩 Flag করুন</div>'; return; }
+  listEl.innerHTML = flaggedIps.map(f => {
+    const t = new Date(f.flagged_at);
+    const tStr = t.toLocaleDateString('en', { month: 'short', day: 'numeric' }) + ' ' + t.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const ipForJs = f.ip.replace(/'/g, "\\'");
+    return `<div class="flagged-row">
+      <span class="flagged-row-ip">🚨 ${esc(f.ip)}</span>
+      <span class="flagged-row-reason">${esc(f.reason) || '<em style="color:#475569">কারণ নেই</em>'}</span>
+      <span class="flagged-row-time">${tStr}</span>
+      <button class="btn-unflag" onclick="unflagIp('${ipForJs}')">✓ Unflag</button>
+    </div>`;
+  }).join('');
+}
+
+async function flagIp(ip) {
+  const reason = prompt(`"${ip}" কে flag করুন\nকারণ (optional):`, 'প্রতারণামূলক অ্যাকাউন্ট') ?? null;
+  if (reason === null) return;
+  const r = await api('/flagged-ips', 'POST', { ip, reason });
+  if (r.ok) {
+    const data = await r.json();
+    const idx = flaggedIps.findIndex(f => f.ip === ip);
+    if (idx !== -1) flaggedIps[idx] = data; else flaggedIps.unshift(data);
+    renderFlaggedIps();
+    renderHitFeed(analyticsData.recent, false);
+  }
+}
+
+async function unflagIp(ip) {
+  if (!confirm(`"${ip}" কে unflag করবেন?`)) return;
+  const r = await api('/flagged-ips/' + encodeURIComponent(ip), 'DELETE');
+  if (r.ok) {
+    flaggedIps = flaggedIps.filter(f => f.ip !== ip);
+    renderFlaggedIps();
+    renderHitFeed(analyticsData.recent, false);
+  }
+}
+
+function openManualFlag() {
+  const f = document.getElementById('manual-flag-form');
+  if (f) { f.style.display = 'block'; document.getElementById('manual-flag-ip').focus(); }
+}
+function closeManualFlag() {
+  const f = document.getElementById('manual-flag-form');
+  if (f) f.style.display = 'none';
+  const m = document.getElementById('manual-flag-msg');
+  if (m) m.style.display = 'none';
+}
+async function submitManualFlag() {
+  const ip = document.getElementById('manual-flag-ip').value.trim();
+  const reason = document.getElementById('manual-flag-reason').value.trim();
+  const msgEl = document.getElementById('manual-flag-msg');
+  msgEl.style.display = 'none';
+  if (!ip) { msgEl.className='error-msg'; msgEl.textContent='IP address দিন।'; msgEl.style.display='block'; return; }
+  const r = await api('/flagged-ips', 'POST', { ip, reason });
+  const data = await r.json();
+  if (!r.ok) { msgEl.className='error-msg'; msgEl.textContent=data.error; msgEl.style.display='block'; return; }
+  const idx = flaggedIps.findIndex(f => f.ip === ip);
+  if (idx !== -1) flaggedIps[idx] = data; else flaggedIps.unshift(data);
+  renderFlaggedIps();
+  renderHitFeed(analyticsData.recent, false);
+  document.getElementById('manual-flag-ip').value = '';
+  document.getElementById('manual-flag-reason').value = '';
+  msgEl.className='success-msg'; msgEl.textContent=`✓ "${ip}" flag করা হয়েছে!`; msgEl.style.display='block';
+  setTimeout(() => { msgEl.style.display='none'; }, 3000);
+}
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+async function loadMessages() {
+  try {
+    const r = await api('/messages');
+    if (!r.ok) return;
+    messages = await r.json();
+    renderMessages();
+  } catch {}
+}
+
+function renderMessages() {
+  const el = document.getElementById('messages-container');
+  if (!el) return;
+  if (!messages.length) { el.innerHTML = '<div class="no-messages">কোনো message নেই — নিচে লিখে যোগ করুন</div>'; return; }
+  el.innerHTML = messages.map(m => `
+    <div class="msg-row" id="msg-row-${m.id}">
+      <span class="msg-text" id="msg-text-${m.id}">${esc(m.message)}</span>
+      <button class="btn-xs" style="background:#1e3a5f;color:#60a5fa" onclick="editMessage(${m.id})">✎</button>
+      <button class="btn-xs" style="background:#450a0a;color:#f87171" onclick="deleteMessage(${m.id})">✕</button>
+    </div>`).join('');
+}
+
+async function addMessage() {
+  const input = document.getElementById('new-msg-input');
+  const msgEl = document.getElementById('msg-status');
+  const text = input.value.trim();
+  if (!text) return;
+  const r = await api('/messages', 'POST', { message: text });
+  if (r.ok) {
+    const data = await r.json();
+    messages.push(data);
+    renderMessages();
+    input.value = '';
+    msgEl.className='success-msg'; msgEl.textContent='✓ Message যোগ হয়েছে!'; msgEl.style.display='block';
+    setTimeout(() => msgEl.style.display='none', 2500);
+  }
+}
+
+function editMessage(id) {
+  const textEl = document.getElementById('msg-text-' + id);
+  const msg = messages.find(m => m.id === id);
+  if (!msg || !textEl) return;
+  textEl.innerHTML = `<input type="text" value="${esc(msg.message)}" id="edit-input-${id}" onkeydown="if(event.key==='Enter')saveEdit(${id});if(event.key==='Escape')renderMessages();">`;
+  document.getElementById('edit-input-' + id).focus();
+  document.getElementById('edit-input-' + id).select();
+}
+
+async function saveEdit(id) {
+  const input = document.getElementById('edit-input-' + id);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  const r = await api('/messages/' + id, 'PUT', { message: text });
+  if (r.ok) {
+    const data = await r.json();
+    const idx = messages.findIndex(m => m.id === id);
+    if (idx !== -1) messages[idx] = data;
+    renderMessages();
+  }
+}
+
+async function deleteMessage(id) {
+  if (!confirm('এই message মুছবেন?')) return;
+  const r = await api('/messages/' + id, 'DELETE');
+  if (r.ok) {
+    messages = messages.filter(m => m.id !== id);
+    renderMessages();
+  }
+}
+
+// ── Misc ──────────────────────────────────────────────────────────────────────
 async function changePassword() {
-  const cur  = document.getElementById('cur-pass').value;
-  const nw   = document.getElementById('new-pass').value;
+  const cur = document.getElementById('cur-pass').value;
+  const nw  = document.getElementById('new-pass').value;
   const conf = document.getElementById('confirm-pass').value;
   const msgEl = document.getElementById('pw-msg');
   msgEl.style.display = 'none';
@@ -291,35 +665,28 @@ async function changePassword() {
     const data = await r.json();
     if (!r.ok) throw new Error(data.error);
     msgEl.className='success-msg'; msgEl.textContent='✓ Password পরিবর্তন হয়েছে!';
-    ['cur-pass','new-pass','confirm-pass'].forEach(id => document.getElementById(id).value='');
+    ['cur-pass','new-pass','confirm-pass'].forEach(id => document.getElementById(id).value = '');
   } catch(e) { msgEl.className='error-msg'; msgEl.textContent=e.message; }
   msgEl.style.display='block'; setTimeout(() => msgEl.style.display='none', 5000);
 }
 
 function copyUrl() {
   navigator.clipboard.writeText(configUrl).then(() => {
-    const btn = event.target; btn.textContent='✓ Copied!';
-    setTimeout(() => btn.textContent='📋 Copy URL', 2000);
+    const btn = event.target; btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy URL', 2000);
   });
 }
-
-function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── Auto-login ────────────────────────────────────────────────────────────────
 if (TOKEN) {
   const u = sessionStorage.getItem('app_user_' + API_KEY) || '';
   const n = sessionStorage.getItem('app_name_' + API_KEY) || '';
-  // set login page badge first
-  document.getElementById('app-name-display').textContent = n || API_KEY.slice(0, 8) + '...';
+  document.getElementById('app-name-display').textContent = n || API_KEY.slice(0,8) + '...';
   showDashboard(u, n);
 } else {
-  // Show app name on login page (fetch from public endpoint)
   fetch(window.location.origin + '/api/dialog/config/' + API_KEY)
-    .then(r => {
-      if (r.ok) document.getElementById('app-name-display').textContent = '📱 App Panel';
-      else document.getElementById('app-name-display').textContent = '❌ Invalid App';
-    })
-    .catch(() => document.getElementById('app-name-display').textContent = 'App Panel');
+    .then(r => { document.getElementById('app-name-display').textContent = r.ok ? '📱 App Panel' : '❌ Invalid App'; })
+    .catch(() => { document.getElementById('app-name-display').textContent = 'App Panel'; });
 }
 </script>
 </body>
