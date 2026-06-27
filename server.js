@@ -9,7 +9,7 @@ const path    = require('path');
 const crypto  = require('crypto');
 const { Pool } = require('pg');
 
-const PORT   = process.env.PORT || 3000;
+const PORT   = process.env.PORT || 5000;
 const SECRET = process.env.SESSION_SECRET || 'change-this-secret';
 const pool   = new Pool({ connectionString: process.env.DATABASE_URL });
 
