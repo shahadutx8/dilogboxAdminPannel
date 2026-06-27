@@ -16,16 +16,17 @@ const pool   = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = { query: (text, params) => pool.query(text, params) };
 
 const DEFAULT_FIELDS = [
-  ['dialog_enabled',   true,  'সম্পূর্ণ Dialog চালু'],
-  ['show_device_id',   true,  'Device ID'],
-  ['show_device_name', true,  'Device Name'],
-  ['show_model',       true,  'Model'],
-  ['show_android',     true,  'Android Version'],
-  ['show_imei',        true,  'IMEI'],
-  ['show_last_url',    true,  'Last URL'],
-  ['show_ipv4',        true,  'IPv4'],
-  ['show_ipv6',        true,  'IPv6'],
-  ['show_ipv6_check',  true,  'IPv6 Check (Withdrawal)'],
+  ['dialog_enabled',      true,  'সম্পূর্ণ Dialog চালু'],
+  ['hide_when_offline',   false, 'Server Offline হলে Dialog লুকাও'],
+  ['show_device_id',      true,  'Device ID'],
+  ['show_device_name',    true,  'Device Name'],
+  ['show_model',          true,  'Model'],
+  ['show_android',        true,  'Android Version'],
+  ['show_imei',           true,  'IMEI'],
+  ['show_last_url',       true,  'Last URL'],
+  ['show_ipv4',           true,  'IPv4'],
+  ['show_ipv6',           true,  'IPv6'],
+  ['show_ipv6_check',     true,  'IPv6 Check (Withdrawal)'],
 ];
 
 async function seedAppConfig(appId) {
@@ -92,6 +93,16 @@ async function initDB() {
       password_hash TEXT NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(app_id, username)
+    )
+  `);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS dialog_messages (
+      id SERIAL PRIMARY KEY,
+      app_id INTEGER NOT NULL REFERENCES apps(id) ON DELETE CASCADE,
+      message TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
 
@@ -350,14 +361,57 @@ app.put('/api/panel/:apiKey/password', requireAppAuth, async (req, res) => {
   res.json({ success: true });
 });
 
+// ── Messages CRUD (super admin) ───────────────────────────────────────────────
+app.get('/api/admin/apps/:id/messages', requireSuperAuth, async (req, res) => {
+  const { rows } = await db.query(
+    'SELECT id, message, sort_order FROM dialog_messages WHERE app_id = $1 ORDER BY sort_order ASC, id ASC',
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.post('/api/admin/apps/:id/messages', requireSuperAuth, async (req, res) => {
+  const { message } = req.body;
+  if (!message || !message.trim()) return res.status(400).json({ error: 'Message required' });
+  const { rows: existing } = await db.query('SELECT COALESCE(MAX(sort_order),0)+1 AS next FROM dialog_messages WHERE app_id = $1', [req.params.id]);
+  const sortOrder = existing[0].next;
+  const { rows } = await db.query(
+    'INSERT INTO dialog_messages (app_id, message, sort_order) VALUES ($1, $2, $3) RETURNING id, message, sort_order',
+    [req.params.id, message.trim(), sortOrder]
+  );
+  res.json(rows[0]);
+});
+
+app.put('/api/admin/apps/:id/messages/:msgId', requireSuperAuth, async (req, res) => {
+  const { message } = req.body;
+  if (!message || !message.trim()) return res.status(400).json({ error: 'Message required' });
+  const { rows } = await db.query(
+    'UPDATE dialog_messages SET message = $1 WHERE id = $2 AND app_id = $3 RETURNING id, message, sort_order',
+    [message.trim(), req.params.msgId, req.params.id]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Message not found' });
+  res.json(rows[0]);
+});
+
+app.delete('/api/admin/apps/:id/messages/:msgId', requireSuperAuth, async (req, res) => {
+  await db.query('DELETE FROM dialog_messages WHERE id = $1 AND app_id = $2', [req.params.msgId, req.params.id]);
+  res.json({ success: true });
+});
+
 // ── Public config (Android) ───────────────────────────────────────────────────
 app.get('/api/dialog/config/:apiKey', async (req, res) => {
   try {
     const { rows: appRows } = await db.query('SELECT id FROM apps WHERE api_key = $1', [req.params.apiKey]);
     if (!appRows.length) return res.status(404).json({ error: 'App not found' });
-    const { rows } = await db.query('SELECT key, enabled FROM dialog_config WHERE app_id = $1', [appRows[0].id]);
+    const appId = appRows[0].id;
+    const { rows } = await db.query('SELECT key, enabled FROM dialog_config WHERE app_id = $1', [appId]);
     const config = {};
     for (const row of rows) config[row.key] = row.enabled;
+    const { rows: msgRows } = await db.query(
+      'SELECT message FROM dialog_messages WHERE app_id = $1 ORDER BY sort_order ASC, id ASC',
+      [appId]
+    );
+    config.messages = msgRows.map(r => r.message);
     res.set('Cache-Control', 'no-store');
     res.json(config);
   } catch { res.status(500).json({ error: 'Failed to fetch config' }); }

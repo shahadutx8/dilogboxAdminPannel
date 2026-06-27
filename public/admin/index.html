@@ -83,6 +83,10 @@
   .master-item { background: #0f172a; border-radius: 10px; padding: 13px 15px; margin-bottom: 14px; }
   .master-item .config-label { font-size: 14px; color: #f1f5f9; font-weight: 600; }
 
+  .offline-item { background: #1c1917; border: 1px solid #44403c; border-radius: 10px; padding: 13px 15px; margin-bottom: 14px; }
+  .offline-item .config-label { font-size: 13px; color: #f97316; font-weight: 600; }
+  .offline-item .config-key { color: #57534e; }
+
   .save-bar { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
   .save-bar button { flex: 1; }
   .saving-indicator { font-size: 12px; color: #94a3b8; display: none; }
@@ -104,6 +108,18 @@
   .add-admin-form .row { display: flex; gap: 8px; margin-top: 10px; }
   .add-admin-form .row input { flex: 1; padding: 8px 11px; background: #1e293b; border: 1px solid #334155; border-radius: 7px; color: #f1f5f9; font-size: 13px; outline: none; }
   .add-admin-form .row input:focus { border-color: #3b82f6; }
+
+  /* Messages */
+  .msg-row { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid #0f172a; }
+  .msg-row:last-child { border-bottom: none; }
+  .msg-row:first-child { padding-top: 0; }
+  .msg-text { flex: 1; font-size: 13px; color: #cbd5e1; }
+  .msg-edit-input { flex: 1; padding: 6px 10px; background: #0f172a; border: 1px solid #3b82f6; border-radius: 6px; color: #f1f5f9; font-size: 13px; outline: none; }
+  .no-messages { text-align: center; padding: 20px; color: #475569; font-size: 13px; }
+  .add-msg-form { background: #0f172a; border-radius: 10px; padding: 14px; margin-top: 14px; }
+  .add-msg-form .row { display: flex; gap: 8px; margin-top: 10px; }
+  .add-msg-form .row input { flex: 1; padding: 8px 11px; background: #1e293b; border: 1px solid #334155; border-radius: 7px; color: #f1f5f9; font-size: 13px; outline: none; }
+  .add-msg-form .row input:focus { border-color: #3b82f6; }
 
   /* Modal */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -210,9 +226,10 @@
 <script>
 const BASE = window.location.origin + '/api';
 let TOKEN = localStorage.getItem('admin_token') || '';
-let apps = [], currentAppId = null, configData = [], appAdmins = [];
+let apps = [], currentAppId = null, configData = [], appAdmins = [], messagesData = [];
 let modalMode = null, renameTargetId = null;
-let pwModalTarget = null; // {appId, adminId}
+let pwModalTarget = null;
+let editingMsgId = null;
 
 const FIELD_KEYS = ['show_device_id','show_device_name','show_model','show_android','show_imei','show_last_url','show_ipv4','show_ipv6','show_ipv6_check'];
 
@@ -252,7 +269,7 @@ function doLogout() {
   document.getElementById('dashboard-page').style.display = 'none';
   document.getElementById('login-page').style.display = 'flex';
   document.getElementById('login-pass').value = '';
-  apps = []; currentAppId = null; configData = []; appAdmins = [];
+  apps = []; currentAppId = null; configData = []; appAdmins = []; messagesData = [];
 }
 
 function showDashboard(username) {
@@ -287,7 +304,7 @@ function renderAppList() {
 async function selectApp(id) {
   currentAppId = id; localStorage.setItem('last_app_id', id);
   renderAppList();
-  await Promise.all([loadConfig(), loadAdmins()]);
+  await Promise.all([loadConfig(), loadAdmins(), loadMessages()]);
   renderAppContent();
 }
 
@@ -304,13 +321,20 @@ async function loadAdmins() {
   if (r.ok) appAdmins = await r.json();
 }
 
+// ── Messages ──────────────────────────────────────────────────────────────────
+async function loadMessages() {
+  const r = await api(`/admin/apps/${currentAppId}/messages`);
+  if (r.ok) messagesData = await r.json();
+}
+
 // ── Render ────────────────────────────────────────────────────────────────────
 function renderAppContent() {
   const a = apps.find(x => x.id === currentAppId);
   if (!a) return;
   const configUrl = `${window.location.origin}/api/dialog/config/${a.api_key}`;
   const panelUrl  = `${window.location.origin}/panel/${a.api_key}/`;
-  const master = configData.find(c => c.key === 'dialog_enabled');
+  const master  = configData.find(c => c.key === 'dialog_enabled');
+  const offline = configData.find(c => c.key === 'hide_when_offline');
   const fields  = configData.filter(c => FIELD_KEYS.includes(c.key));
 
   document.getElementById('app-content').innerHTML = `
@@ -330,6 +354,19 @@ function renderAppContent() {
         <div><div class="config-label">${esc(master.label)}</div><div class="config-key">${master.key}</div></div>
         <label class="toggle"><input type="checkbox" id="toggle_dialog_enabled" ${master.enabled?'checked':''} onchange="toggleMaster(this)"><span class="slider"></span></label>
       </div>` : ''}
+      ${offline ? `
+      <div class="offline-item config-item">
+        <div>
+          <div class="config-label">🔴 ${esc(offline.label)}</div>
+          <div class="config-key">${offline.key}</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="toggle_hide_when_offline" ${offline.enabled?'checked':''}><span class="slider"></span></label>
+      </div>` : ''}
+      <div class="save-bar" style="margin-top:12px">
+        <button class="btn btn-primary btn-sm" onclick="saveConfig()">💾 Save</button>
+        <span class="saving-indicator" id="saving-txt">Saving...</span>
+      </div>
+      <div id="save-msg" style="display:none"></div>
     </div>
 
     <!-- Fields -->
@@ -343,9 +380,22 @@ function renderAppContent() {
       </div>`).join('')}
       <div class="save-bar">
         <button class="btn btn-primary" onclick="saveConfig()">💾 Save Changes</button>
-        <span class="saving-indicator" id="saving-txt">Saving...</span>
       </div>
-      <div id="save-msg" style="display:none"></div>
+    </div>
+
+    <!-- Dialog Messages -->
+    <div class="section">
+      <div class="section-title">💬 Dialog Messages</div>
+      <div class="section-sub">Dialog-এর নিচে custom বার্তা দেখান — যেমন: "Withdraw করবেন না"</div>
+      <div id="messages-list">${renderMessagesList()}</div>
+      <div class="add-msg-form">
+        <div style="font-size:12px;color:#94a3b8;font-weight:600">নতুন Message যোগ করুন</div>
+        <div class="row">
+          <input type="text" id="new-msg-text" placeholder="যেমন: Withdraw করবেন না">
+          <button class="btn btn-primary btn-sm" onclick="addMessage()">Add</button>
+        </div>
+        <div id="add-msg-msg" style="display:none;margin-top:8px"></div>
+      </div>
     </div>
 
     <!-- App Admins -->
@@ -395,6 +445,75 @@ function renderAppContent() {
   `;
 }
 
+// ── Messages ──────────────────────────────────────────────────────────────────
+function renderMessagesList() {
+  if (!messagesData.length) return '<div class="no-messages">এখনো কোনো message নেই</div>';
+  return messagesData.map(m => `
+    <div class="msg-row" id="msg-row-${m.id}">
+      <span class="msg-text" id="msg-text-${m.id}">${esc(m.message)}</span>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-ghost btn-xs" onclick="startEditMsg(${m.id})">✏️</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteMessage(${m.id})">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+async function addMessage() {
+  const input = document.getElementById('new-msg-text');
+  const msgEl = document.getElementById('add-msg-msg');
+  const message = input.value.trim();
+  msgEl.style.display = 'none';
+  if (!message) { msgEl.className='error-msg'; msgEl.textContent='Message লিখুন।'; msgEl.style.display='block'; return; }
+  const r = await api(`/admin/apps/${currentAppId}/messages`, 'POST', { message });
+  const data = await r.json();
+  if (!r.ok) { msgEl.className='error-msg'; msgEl.textContent=data.error; msgEl.style.display='block'; return; }
+  messagesData.push(data);
+  input.value = '';
+  document.getElementById('messages-list').innerHTML = renderMessagesList();
+  msgEl.className='success-msg'; msgEl.textContent='✓ Message যোগ হয়েছে!'; msgEl.style.display='block';
+  setTimeout(() => msgEl.style.display='none', 3000);
+}
+
+function startEditMsg(id) {
+  const m = messagesData.find(x => x.id === id);
+  if (!m) return;
+  const row = document.getElementById('msg-row-' + id);
+  row.innerHTML = `
+    <input class="msg-edit-input" id="edit-msg-input-${id}" value="${esc(m.message)}" onkeydown="if(event.key==='Enter')saveEditMsg(${id});if(event.key==='Escape')cancelEditMsg(${id})">
+    <div style="display:flex;gap:6px;flex-shrink:0">
+      <button class="btn btn-primary btn-xs" onclick="saveEditMsg(${id})">✓</button>
+      <button class="btn btn-ghost btn-xs" onclick="cancelEditMsg(${id})">✕</button>
+    </div>`;
+  document.getElementById('edit-msg-input-' + id).focus();
+}
+
+async function saveEditMsg(id) {
+  const input = document.getElementById('edit-msg-input-' + id);
+  const message = input.value.trim();
+  if (!message) return;
+  const r = await api(`/admin/apps/${currentAppId}/messages/${id}`, 'PUT', { message });
+  const data = await r.json();
+  if (r.ok) {
+    const idx = messagesData.findIndex(x => x.id === id);
+    if (idx !== -1) messagesData[idx] = data;
+    document.getElementById('messages-list').innerHTML = renderMessagesList();
+  }
+}
+
+function cancelEditMsg(id) {
+  document.getElementById('messages-list').innerHTML = renderMessagesList();
+}
+
+async function deleteMessage(id) {
+  if (!confirm('এই message মুছে ফেলবেন?')) return;
+  const r = await api(`/admin/apps/${currentAppId}/messages/${id}`, 'DELETE');
+  if (r.ok) {
+    messagesData = messagesData.filter(m => m.id !== id);
+    document.getElementById('messages-list').innerHTML = renderMessagesList();
+  }
+}
+
+// ── Admins ────────────────────────────────────────────────────────────────────
 function renderAdminsList() {
   if (!appAdmins.length) return '<div class="no-admins">এখনো কোনো admin নেই</div>';
   return appAdmins.map(a => `
@@ -433,7 +552,6 @@ async function removeAdmin(adminId, username) {
   if (r.ok) { appAdmins = appAdmins.filter(a => a.id !== adminId); document.getElementById('admins-list').innerHTML = renderAdminsList(); }
 }
 
-// Password reset modal
 function openPwModal(appId, adminId, username) {
   pwModalTarget = { appId, adminId };
   document.getElementById('pw-modal-title').textContent = `Reset: ${username}`;
