@@ -57,6 +57,21 @@ async function initDB() {
     )
   `);
 
+  // Migration: পুরনো dialog_config table (app_id ছাড়া) থাকলে drop করো
+  await db.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.tables WHERE table_name = 'dialog_config'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'dialog_config' AND column_name = 'app_id'
+      ) THEN
+        DROP TABLE dialog_config;
+      END IF;
+    END $$;
+  `);
+
   await db.query(`
     CREATE TABLE IF NOT EXISTS dialog_config (
       id SERIAL PRIMARY KEY,
