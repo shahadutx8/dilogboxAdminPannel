@@ -1,1 +1,326 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>App Admin Panel</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
 
+  #login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+  .login-card { background: #1e293b; border-radius: 16px; padding: 40px 32px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+  .login-card h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; color: #f8fafc; }
+  .app-name-badge { font-size: 12px; color: #94a3b8; background: #0f172a; padding: 4px 12px; border-radius: 20px; display: inline-block; margin-bottom: 24px; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-group input { width: 100%; padding: 11px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f1f5f9; font-size: 14px; outline: none; transition: border-color 0.2s; }
+  .form-group input:focus { border-color: #3b82f6; }
+
+  .btn { padding: 10px 18px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-full { width: 100%; }
+  .btn-primary { background: #3b82f6; color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-danger { background: #ef4444; color: #fff; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #334155; }
+  .btn-ghost:hover { background: #1e293b; color: #e2e8f0; }
+  .btn-sm { padding: 7px 13px; font-size: 12px; }
+
+  .error-msg { background: #450a0a; border: 1px solid #ef4444; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #fca5a5; margin-top: 12px; }
+  .success-msg { background: #052e16; border: 1px solid #22c55e; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #86efac; margin-top: 12px; }
+
+  #dashboard-page { display: none; }
+  .topbar { background: #1e293b; padding: 13px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 10; }
+  .topbar-left h1 { font-size: 15px; font-weight: 700; color: #f8fafc; }
+  .topbar-left .app-label { font-size: 11px; color: #64748b; margin-top: 1px; }
+  .topbar-right { display: flex; gap: 10px; align-items: center; }
+  .user-badge { font-size: 12px; color: #94a3b8; background: #0f172a; padding: 5px 11px; border-radius: 20px; }
+  .logout-btn { background: #334155; color: #e2e8f0; border: none; padding: 7px 13px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+  .logout-btn:hover { background: #475569; }
+
+  .main { padding: 22px; }
+  .content { max-width: 560px; margin: 0 auto; }
+
+  .section { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .section-title { font-size: 14px; font-weight: 600; color: #f1f5f9; margin-bottom: 3px; }
+  .section-sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+
+  .config-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #0f172a; }
+  .config-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .config-item:first-child { padding-top: 0; }
+  .config-label { font-size: 13px; color: #cbd5e1; font-weight: 500; }
+  .config-key { font-size: 11px; color: #475569; margin-top: 2px; font-family: monospace; }
+
+  .toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background: #334155; transition: 0.3s; border-radius: 24px; }
+  .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background: #94a3b8; transition: 0.3s; border-radius: 50%; }
+  .toggle input:checked + .slider { background: #3b82f6; }
+  .toggle input:checked + .slider:before { transform: translateX(20px); background: #fff; }
+
+  .master-item { background: #0f172a; border-radius: 10px; padding: 13px 15px; margin-bottom: 14px; }
+  .master-item .config-label { font-size: 14px; color: #f1f5f9; font-weight: 600; }
+
+  .save-bar { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+  .save-bar button { flex: 1; }
+  .saving-indicator { font-size: 12px; color: #94a3b8; display: none; }
+
+  .pw-form .form-group { margin-bottom: 10px; }
+  .pw-form .form-group input { padding: 9px 12px; font-size: 13px; }
+
+  .api-url-box { background: #0f172a; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 11px; color: #38bdf8; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<div id="login-page">
+  <div class="login-card">
+    <h1>🔐 Admin Login</h1>
+    <div id="app-name-display" class="app-name-badge">Loading...</div>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="login-user" autocomplete="username" placeholder="Username">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary btn-full" id="login-btn" onclick="doLogin()">Login</button>
+    <div id="login-err" style="display:none"></div>
+  </div>
+</div>
+
+<div id="dashboard-page">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="h1" id="topbar-app-name" style="font-size:15px;font-weight:700;color:#f8fafc">App Panel</div>
+      <div class="app-label" id="topbar-username"></div>
+    </div>
+    <div class="topbar-right">
+      <span class="user-badge" id="user-badge"></span>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="content">
+      <!-- Dialog Status -->
+      <div class="section">
+        <div class="section-title">Dialog Status</div>
+        <div class="section-sub">সম্পূর্ণ dialog চালু বা বন্ধ করুন</div>
+        <div id="master-container"></div>
+      </div>
+
+      <!-- Fields -->
+      <div class="section">
+        <div class="section-title">Dialog Fields</div>
+        <div class="section-sub">কোন তথ্য দেখাবে সেটা নিয়ন্ত্রণ করুন</div>
+        <div id="fields-container"></div>
+        <div class="save-bar">
+          <button class="btn btn-primary" onclick="saveConfig()">💾 Save Changes</button>
+          <span class="saving-indicator" id="saving-txt">Saving...</span>
+        </div>
+        <div id="save-msg" style="display:none"></div>
+      </div>
+
+      <!-- Android Config URL -->
+      <div class="section">
+        <div class="section-title">📡 Android Config URL</div>
+        <div class="section-sub">এই URL টা smali কোডের CONFIG_URL field-এ দিন</div>
+        <div class="api-url-box" id="config-url-box"></div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="copyUrl()">📋 Copy URL</button>
+      </div>
+
+      <!-- Password Change -->
+      <div class="section">
+        <div class="section-title">🔑 Password Change</div>
+        <div class="section-sub">আপনার নিজের password পরিবর্তন করুন</div>
+        <div class="pw-form">
+          <div class="form-group"><label>Current Password</label><input type="password" id="cur-pass" placeholder="Current password"></div>
+          <div class="form-group"><label>New Password</label><input type="password" id="new-pass" placeholder="Min 4 chars"></div>
+          <div class="form-group"><label>Confirm</label><input type="password" id="confirm-pass" placeholder="Repeat new password"></div>
+          <button class="btn btn-danger btn-sm" onclick="changePassword()">Change Password</button>
+          <div id="pw-msg" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Extract api_key from URL path: /panel/:apiKey/
+const pathParts = window.location.pathname.split('/').filter(Boolean);
+const API_KEY = pathParts[1] || '';
+const BASE = window.location.origin + '/api/panel/' + API_KEY;
+
+let TOKEN = sessionStorage.getItem('app_token_' + API_KEY) || '';
+let configData = [];
+
+const FIELD_KEYS = ['show_device_id','show_device_name','show_model','show_android','show_imei','show_last_url','show_ipv4','show_ipv6','show_ipv6_check'];
+
+function api(path, method = 'GET', body = null) {
+  return fetch(BASE + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', ...(TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {}) },
+    ...(body !== null ? { body: JSON.stringify(body) } : {})
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+const configUrl = window.location.origin + '/api/dialog/config/' + API_KEY;
+document.getElementById('config-url-box').textContent = configUrl;
+
+if (!API_KEY) {
+  document.getElementById('app-name-display').textContent = 'Invalid URL';
+  document.getElementById('login-btn').disabled = true;
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const btn = document.getElementById('login-btn');
+  const errEl = document.getElementById('login-err');
+  btn.disabled = true; btn.textContent = 'Logging in...'; errEl.style.display = 'none';
+  try {
+    const r = await fetch(window.location.origin + '/api/panel/' + API_KEY + '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById('login-user').value,
+        password: document.getElementById('login-pass').value
+      })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Login failed');
+    TOKEN = data.token;
+    sessionStorage.setItem('app_token_' + API_KEY, TOKEN);
+    sessionStorage.setItem('app_user_' + API_KEY, data.username);
+    sessionStorage.setItem('app_name_' + API_KEY, data.appName);
+    showDashboard(data.username, data.appName);
+  } catch (e) {
+    errEl.className = 'error-msg'; errEl.textContent = e.message; errEl.style.display = 'block';
+  }
+  btn.disabled = false; btn.textContent = 'Login';
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+function doLogout() {
+  TOKEN = '';
+  sessionStorage.removeItem('app_token_' + API_KEY);
+  sessionStorage.removeItem('app_user_' + API_KEY);
+  sessionStorage.removeItem('app_name_' + API_KEY);
+  document.getElementById('dashboard-page').style.display = 'none';
+  document.getElementById('login-page').style.display = 'flex';
+  document.getElementById('login-pass').value = '';
+  configData = [];
+}
+
+function showDashboard(username, appName) {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('dashboard-page').style.display = 'block';
+  document.getElementById('user-badge').textContent = username;
+  document.getElementById('topbar-app-name').textContent = '📱 ' + (appName || 'App Panel');
+  document.getElementById('topbar-username').textContent = 'Logged in as: ' + username;
+  document.title = (appName || 'App') + ' Admin Panel';
+  loadConfig();
+}
+
+// ── Config ────────────────────────────────────────────────────────────────────
+async function loadConfig() {
+  try {
+    const r = await api('/config');
+    if (r.status === 401) { doLogout(); return; }
+    configData = await r.json();
+    renderConfig();
+  } catch {}
+}
+
+function renderConfig() {
+  const master = configData.find(c => c.key === 'dialog_enabled');
+  const fields  = configData.filter(c => FIELD_KEYS.includes(c.key));
+
+  const masterEl = document.getElementById('master-container');
+  masterEl.innerHTML = master ? `
+    <div class="master-item config-item">
+      <div><div class="config-label">${esc(master.label)}</div><div class="config-key">${master.key}</div></div>
+      <label class="toggle"><input type="checkbox" id="toggle_dialog_enabled" ${master.enabled?'checked':''} onchange="toggleMaster(this)"><span class="slider"></span></label>
+    </div>` : '';
+
+  document.getElementById('fields-container').innerHTML = fields.map(c => `
+    <div class="config-item">
+      <div><div class="config-label">${esc(c.label)}</div><div class="config-key">${c.key}</div></div>
+      <label class="toggle"><input type="checkbox" id="toggle_${c.key}" ${c.enabled?'checked':''}><span class="slider"></span></label>
+    </div>`).join('');
+}
+
+function toggleMaster(el) {
+  const on = el.checked;
+  FIELD_KEYS.forEach(k => { const t = document.getElementById('toggle_'+k); if (t) t.checked = on; });
+  saveConfig();
+}
+
+async function saveConfig() {
+  const savingTxt = document.getElementById('saving-txt');
+  const saveMsg   = document.getElementById('save-msg');
+  savingTxt.style.display = 'inline'; saveMsg.style.display = 'none';
+  const updates = configData.map(c => ({ key: c.key, enabled: document.getElementById('toggle_'+c.key)?.checked ?? c.enabled }));
+  try {
+    const r = await api('/config', 'PUT', updates);
+    if (r.status === 401) { doLogout(); return; }
+    configData = await r.json();
+    saveMsg.className = 'success-msg'; saveMsg.textContent = '✓ Saved!';
+  } catch { saveMsg.className = 'error-msg'; saveMsg.textContent = 'Save failed.'; }
+  savingTxt.style.display = 'none'; saveMsg.style.display = 'block';
+  setTimeout(() => saveMsg.style.display = 'none', 3000);
+}
+
+async function changePassword() {
+  const cur  = document.getElementById('cur-pass').value;
+  const nw   = document.getElementById('new-pass').value;
+  const conf = document.getElementById('confirm-pass').value;
+  const msgEl = document.getElementById('pw-msg');
+  msgEl.style.display = 'none';
+  if (!cur||!nw||!conf) { msgEl.className='error-msg'; msgEl.textContent='সব field পূরণ করুন।'; msgEl.style.display='block'; return; }
+  if (nw !== conf) { msgEl.className='error-msg'; msgEl.textContent='Password মিলছে না।'; msgEl.style.display='block'; return; }
+  if (nw.length < 4) { msgEl.className='error-msg'; msgEl.textContent='কমপক্ষে ৪ অক্ষর।'; msgEl.style.display='block'; return; }
+  try {
+    const r = await api('/password', 'PUT', { currentPassword: cur, newPassword: nw });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    msgEl.className='success-msg'; msgEl.textContent='✓ Password পরিবর্তন হয়েছে!';
+    ['cur-pass','new-pass','confirm-pass'].forEach(id => document.getElementById(id).value='');
+  } catch(e) { msgEl.className='error-msg'; msgEl.textContent=e.message; }
+  msgEl.style.display='block'; setTimeout(() => msgEl.style.display='none', 5000);
+}
+
+function copyUrl() {
+  navigator.clipboard.writeText(configUrl).then(() => {
+    const btn = event.target; btn.textContent='✓ Copied!';
+    setTimeout(() => btn.textContent='📋 Copy URL', 2000);
+  });
+}
+
+function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Auto-login ────────────────────────────────────────────────────────────────
+if (TOKEN) {
+  const u = sessionStorage.getItem('app_user_' + API_KEY) || '';
+  const n = sessionStorage.getItem('app_name_' + API_KEY) || '';
+  // set login page badge first
+  document.getElementById('app-name-display').textContent = n || API_KEY.slice(0, 8) + '...';
+  showDashboard(u, n);
+} else {
+  // Show app name on login page (fetch from public endpoint)
+  fetch(window.location.origin + '/api/dialog/config/' + API_KEY)
+    .then(r => {
+      if (r.ok) document.getElementById('app-name-display').textContent = '📱 App Panel';
+      else document.getElementById('app-name-display').textContent = '❌ Invalid App';
+    })
+    .catch(() => document.getElementById('app-name-display').textContent = 'App Panel');
+}
+</script>
+</body>
+</html>
