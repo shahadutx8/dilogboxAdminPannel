@@ -106,6 +106,21 @@ async function initDB() {
     )
   `);
 
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS device_hits (
+      id SERIAL PRIMARY KEY,
+      app_id INTEGER NOT NULL REFERENCES apps(id) ON DELETE CASCADE,
+      ip TEXT NOT NULL DEFAULT '',
+      user_agent TEXT NOT NULL DEFAULT '',
+      hit_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_device_hits_app_id ON device_hits(app_id);
+    CREATE INDEX IF NOT EXISTS idx_device_hits_hit_at ON device_hits(hit_at DESC);
+  `);
+
   const { rows: admins } = await db.query('SELECT id FROM admin_users LIMIT 1');
   if (admins.length === 0) {
     const hash = await bcrypt.hash('admin123', 10);
@@ -398,6 +413,76 @@ app.delete('/api/admin/apps/:id/messages/:msgId', requireSuperAuth, async (req, 
   res.json({ success: true });
 });
 
+// ── Analytics SSE clients store ───────────────────────────────────────────────
+const analyticsClients = new Map(); // appId -> Set of res objects
+
+function notifyAnalyticsClients(appId, hit) {
+  const clients = analyticsClients.get(appId);
+  if (!clients || clients.size === 0) return;
+  const data = `data: ${JSON.stringify(hit)}\n\n`;
+  for (const client of clients) {
+    try { client.write(data); } catch {}
+  }
+}
+
+// ── Analytics endpoints (super admin) ─────────────────────────────────────────
+app.get('/api/admin/apps/:id/analytics', requireSuperAuth, async (req, res) => {
+  const appId = req.params.id;
+  const { rows: totalRow } = await db.query(
+    'SELECT COUNT(*) AS total FROM device_hits WHERE app_id = $1', [appId]
+  );
+  const { rows: todayRow } = await db.query(
+    "SELECT COUNT(*) AS today FROM device_hits WHERE app_id = $1 AND hit_at >= NOW() - INTERVAL '24 hours'", [appId]
+  );
+  const { rows: hourly } = await db.query(
+    `SELECT date_trunc('hour', hit_at) AS hour, COUNT(*) AS count
+     FROM device_hits WHERE app_id = $1 AND hit_at >= NOW() - INTERVAL '24 hours'
+     GROUP BY hour ORDER BY hour ASC`, [appId]
+  );
+  const { rows: recent } = await db.query(
+    'SELECT id, ip, user_agent, hit_at FROM device_hits WHERE app_id = $1 ORDER BY hit_at DESC LIMIT 50', [appId]
+  );
+  res.json({
+    total: parseInt(totalRow[0].total),
+    today: parseInt(todayRow[0].today),
+    hourly,
+    recent
+  });
+});
+
+app.get('/api/admin/apps/:id/analytics/stream', (req, res, next) => {
+  if (req.query.token && !req.headers.authorization) {
+    req.headers.authorization = 'Bearer ' + req.query.token;
+  }
+  next();
+}, requireSuperAuth, (req, res) => {
+  const appId = parseInt(req.params.id);
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no'
+  });
+  res.flushHeaders();
+  res.write(': connected\n\n');
+
+  if (!analyticsClients.has(appId)) analyticsClients.set(appId, new Set());
+  analyticsClients.get(appId).add(res);
+
+  const keepAlive = setInterval(() => { try { res.write(': ping\n\n'); } catch {} }, 25000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    const set = analyticsClients.get(appId);
+    if (set) set.delete(res);
+  });
+});
+
+app.delete('/api/admin/apps/:id/analytics', requireSuperAuth, async (req, res) => {
+  await db.query('DELETE FROM device_hits WHERE app_id = $1', [req.params.id]);
+  res.json({ success: true });
+});
+
 // ── Public config (Android) ───────────────────────────────────────────────────
 app.get('/api/dialog/config/:apiKey', async (req, res) => {
   try {
@@ -412,6 +497,15 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
       [appId]
     );
     config.messages = msgRows.map(r => r.message);
+
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || '';
+    const ua = req.headers['user-agent'] || '';
+    db.query('INSERT INTO device_hits (app_id, ip, user_agent) VALUES ($1, $2, $3) RETURNING id, ip, user_agent, hit_at',
+      [appId, ip, ua]
+    ).then(({ rows: hitRows }) => {
+      if (hitRows.length) notifyAnalyticsClients(appId, hitRows[0]);
+    }).catch(() => {});
+
     res.set('Cache-Control', 'no-store');
     res.json(config);
   } catch { res.status(500).json({ error: 'Failed to fetch config' }); }

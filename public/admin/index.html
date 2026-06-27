@@ -131,6 +131,34 @@
   .empty-state { text-align: center; padding: 60px 20px; color: #475569; }
   .empty-state p { font-size: 13px; margin-top: 8px; }
 
+  /* Analytics */
+  .stat-cards { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .stat-card { flex: 1; min-width: 100px; background: #0f172a; border-radius: 10px; padding: 14px 16px; }
+  .stat-card .stat-value { font-size: 26px; font-weight: 700; color: #f8fafc; line-height: 1; }
+  .stat-card .stat-label { font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 500; }
+  .stat-card.live-card { border: 1px solid #166534; background: #052e16; }
+  .stat-card.live-card .stat-value { color: #4ade80; }
+  .live-dot { display: inline-block; width: 8px; height: 8px; background: #22c55e; border-radius: 50%; margin-right: 5px; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+
+  .chart-wrap { margin-bottom: 10px; }
+  .chart-bars { display: flex; align-items: flex-end; gap: 3px; height: 60px; }
+  .chart-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .chart-bar { width: 100%; background: #3b82f6; border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.3s; }
+  .chart-bar-label { font-size: 9px; color: #475569; white-space: nowrap; }
+  .chart-empty { font-size: 12px; color: #475569; text-align: center; padding: 16px 0; }
+
+  .hit-feed { max-height: 260px; overflow-y: auto; }
+  .hit-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid #0f172a; }
+  .hit-row:first-child { padding-top: 0; }
+  .hit-row:last-child { border-bottom: none; }
+  .hit-row.new-hit { animation: flashin 0.6s ease; }
+  @keyframes flashin { from{background:#1e3a5f} to{background:transparent} }
+  .hit-ip { font-size: 12px; color: #38bdf8; font-family: monospace; font-weight: 600; white-space: nowrap; min-width: 100px; }
+  .hit-ua { font-size: 11px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .hit-time { font-size: 10px; color: #475569; white-space: nowrap; flex-shrink: 0; }
+  .no-hits { text-align: center; padding: 20px; color: #475569; font-size: 13px; }
+
   @media (max-width: 640px) {
     .layout { flex-direction: column; }
     .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #334155; flex-direction: row; flex-wrap: wrap; overflow-x: auto; }
@@ -230,6 +258,8 @@ let apps = [], currentAppId = null, configData = [], appAdmins = [], messagesDat
 let modalMode = null, renameTargetId = null;
 let pwModalTarget = null;
 let editingMsgId = null;
+let analyticsData = { total: 0, today: 0, hourly: [], recent: [] };
+let analyticsSSE = null;
 
 const FIELD_KEYS = ['show_device_id','show_device_name','show_model','show_android','show_imei','show_last_url','show_ipv4','show_ipv6','show_ipv6_check'];
 
@@ -306,6 +336,8 @@ async function selectApp(id) {
   renderAppList();
   await Promise.all([loadConfig(), loadAdmins(), loadMessages()]);
   renderAppContent();
+  loadAnalytics();
+  connectAnalyticsSSE(id);
 }
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -343,6 +375,26 @@ function renderAppContent() {
         <h2 style="font-size:17px;font-weight:700;color:#f8fafc">${esc(a.name)}</h2>
         <p style="font-size:11px;color:#64748b;margin-top:2px">App ID: ${a.id}</p>
       </div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="section" id="analytics-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+        <div class="section-title">📊 Real-time Analytics</div>
+        <button class="btn btn-ghost btn-xs" onclick="clearAnalytics()" style="font-size:10px">🗑️ Clear</button>
+      </div>
+      <div class="section-sub">কোন device কখন config fetch করলো — live</div>
+      <div class="stat-cards">
+        <div class="stat-card"><div class="stat-value" id="stat-total">—</div><div class="stat-label">মোট Hit</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-today">—</div><div class="stat-label">আজকের Hit (২৪ ঘণ্টা)</div></div>
+        <div class="stat-card live-card"><div class="stat-value"><span class="live-dot"></span><span id="stat-live">Live</span></div><div class="stat-label">Real-time Connected</div></div>
+      </div>
+      <div class="chart-wrap">
+        <div style="font-size:11px;color:#475569;margin-bottom:6px">গত ২৪ ঘণ্টার Hit (per hour)</div>
+        <div id="analytics-chart" class="chart-empty">লোড হচ্ছে...</div>
+      </div>
+      <div style="font-size:11px;color:#475569;margin-bottom:8px;margin-top:4px">সাম্প্রতিক Hits (সর্বশেষ ৫০টি)</div>
+      <div class="hit-feed" id="hit-feed"><div class="no-hits">লোড হচ্ছে...</div></div>
     </div>
 
     <!-- Dialog Status -->
@@ -666,6 +718,111 @@ async function deleteApp(id, name) {
   if (!r.ok) { alert(data.error); return; }
   if (currentAppId===id) { currentAppId=null; document.getElementById('app-content').innerHTML='<div class="empty-state"><div style="font-size:38px">📱</div><p>বাম দিক থেকে একটি App সিলেক্ট করুন</p></div>'; }
   await loadApps();
+}
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+async function loadAnalytics() {
+  try {
+    const r = await api(`/admin/apps/${currentAppId}/analytics`);
+    if (!r.ok) return;
+    analyticsData = await r.json();
+    updateAnalyticsUI();
+  } catch {}
+}
+
+function updateAnalyticsUI() {
+  const totalEl = document.getElementById('stat-total');
+  const todayEl = document.getElementById('stat-today');
+  if (totalEl) totalEl.textContent = analyticsData.total.toLocaleString();
+  if (todayEl) todayEl.textContent = analyticsData.today.toLocaleString();
+  renderAnalyticsChart(analyticsData.hourly);
+  renderHitFeed(analyticsData.recent, false);
+}
+
+function renderAnalyticsChart(hourly) {
+  const el = document.getElementById('analytics-chart');
+  if (!el) return;
+  if (!hourly || !hourly.length) {
+    el.className = 'chart-empty'; el.textContent = 'এখনো কোনো hit নেই'; return;
+  }
+  el.className = 'chart-bars';
+  const max = Math.max(...hourly.map(h => parseInt(h.count)), 1);
+  el.innerHTML = hourly.map(h => {
+    const count = parseInt(h.count);
+    const pct = Math.max((count / max) * 54, 2);
+    const label = new Date(h.hour).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return `<div class="chart-bar-col" title="${label}: ${count} hits">
+      <div class="chart-bar" style="height:${pct}px"></div>
+      <div class="chart-bar-label">${label.slice(0,5)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderHitFeed(hits, prepend) {
+  const el = document.getElementById('hit-feed');
+  if (!el) return;
+  if (!hits || !hits.length) { el.innerHTML = '<div class="no-hits">এখনো কোনো hit নেই — Android device config fetch করলে এখানে দেখাবে</div>'; return; }
+  if (!prepend) {
+    el.innerHTML = hits.map(h => hitRowHTML(h, false)).join('');
+  } else {
+    const row = document.createElement('div');
+    row.innerHTML = hitRowHTML(hits[0], true);
+    el.insertBefore(row.firstElementChild, el.firstChild);
+    const rows = el.querySelectorAll('.hit-row');
+    if (rows.length > 50) rows[rows.length - 1].remove();
+  }
+}
+
+function hitRowHTML(h, isNew) {
+  const time = new Date(h.hit_at);
+  const timeStr = time.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const dateStr = time.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+  const ua = h.user_agent || 'Unknown';
+  const shortUA = ua.length > 50 ? ua.slice(0, 50) + '…' : ua;
+  return `<div class="hit-row${isNew ? ' new-hit' : ''}">
+    <span class="hit-ip">${esc(h.ip || '?')}</span>
+    <span class="hit-ua" title="${esc(ua)}">${esc(shortUA)}</span>
+    <span class="hit-time">${dateStr} ${timeStr}</span>
+  </div>`;
+}
+
+function connectAnalyticsSSE(appId) {
+  if (analyticsSSE) { try { analyticsSSE.close(); } catch {} analyticsSSE = null; }
+  if (!TOKEN) return;
+  const url = `${BASE}/admin/apps/${appId}/analytics/stream`;
+  const es = new EventSource(url + `?token=${encodeURIComponent(TOKEN)}`);
+  analyticsSSE = es;
+
+  es.onmessage = (e) => {
+    if (currentAppId !== appId) { es.close(); return; }
+    try {
+      const hit = JSON.parse(e.data);
+      analyticsData.total++;
+      analyticsData.today++;
+      const statTotal = document.getElementById('stat-total');
+      const statToday = document.getElementById('stat-today');
+      if (statTotal) statTotal.textContent = analyticsData.total.toLocaleString();
+      if (statToday) statToday.textContent = analyticsData.today.toLocaleString();
+      renderHitFeed([hit], true);
+      const nowHour = new Date();
+      nowHour.setMinutes(0, 0, 0);
+      const hourKey = nowHour.toISOString();
+      const existing = analyticsData.hourly.find(h => new Date(h.hour).getTime() === nowHour.getTime());
+      if (existing) existing.count = parseInt(existing.count) + 1;
+      else analyticsData.hourly.push({ hour: hourKey, count: 1 });
+      renderAnalyticsChart(analyticsData.hourly);
+    } catch {}
+  };
+  es.onerror = () => { try { es.close(); } catch {} };
+}
+
+async function clearAnalytics() {
+  if (!confirm('এই App-এর সব analytics data মুছে ফেলবেন?')) return;
+  const r = await api(`/admin/apps/${currentAppId}/analytics`, 'DELETE');
+  if (r.ok) {
+    analyticsData = { total: 0, today: 0, hourly: [], recent: [] };
+    updateAnalyticsUI();
+  }
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
