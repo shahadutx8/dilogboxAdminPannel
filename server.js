@@ -451,7 +451,11 @@ app.get('/api/admin/apps/:id/analytics', requireSuperAuth, async (req, res) => {
      GROUP BY hour ORDER BY hour ASC`, [appId]
   );
   const { rows: recent } = await db.query(
-    'SELECT id, ip, user_agent, hit_at FROM device_hits WHERE app_id = $1 ORDER BY hit_at DESC LIMIT 50', [appId]
+    `SELECT dh.id, dh.ip, dh.user_agent, dh.hit_at,
+            (fi.ip IS NOT NULL) AS flagged
+     FROM device_hits dh
+     LEFT JOIN flagged_ips fi ON fi.app_id = dh.app_id AND fi.ip = dh.ip
+     WHERE dh.app_id = $1 ORDER BY dh.hit_at DESC LIMIT 50`, [appId]
   );
   res.json({
     total: parseInt(totalRow[0].total),
@@ -539,10 +543,23 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
 
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || '';
     const ua = req.headers['user-agent'] || '';
+
+    const { rows: flagRows } = await db.query(
+      'SELECT reason FROM flagged_ips WHERE app_id = $1 AND ip = $2 LIMIT 1',
+      [appId, ip]
+    );
+    if (flagRows.length) {
+      config.fraud_detected = true;
+      config.fraud_message = flagRows[0].reason || 'প্রতারণামূলক অ্যাকাউন্ট ধরতে পারে';
+    }
+
     db.query('INSERT INTO device_hits (app_id, ip, user_agent) VALUES ($1, $2, $3) RETURNING id, ip, user_agent, hit_at',
       [appId, ip, ua]
     ).then(({ rows: hitRows }) => {
-      if (hitRows.length) notifyAnalyticsClients(appId, hitRows[0]);
+      if (hitRows.length) {
+        const hit = { ...hitRows[0], flagged: flagRows.length > 0 };
+        notifyAnalyticsClients(appId, hit);
+      }
     }).catch(() => {});
 
     res.set('Cache-Control', 'no-store');
