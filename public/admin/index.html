@@ -3,106 +3,133 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dialog Admin Panel</title>
+<title>Super Admin Panel</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
 
-  /* LOGIN */
-  #login-page {
-    display: flex; align-items: center; justify-content: center;
-    min-height: 100vh; padding: 20px;
-  }
-  .login-card {
-    background: #1e293b; border-radius: 16px; padding: 40px 32px;
-    width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-  }
-  .login-card h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #f8fafc; }
-  .login-card p { font-size: 13px; color: #94a3b8; margin-bottom: 28px; }
+  #login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+  .login-card { background: #1e293b; border-radius: 16px; padding: 40px 32px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+  .login-card h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; color: #f8fafc; }
+  .login-card .subtitle { font-size: 12px; color: #f59e0b; background: #451a03; border: 1px solid #92400e; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-bottom: 24px; }
   .form-group { margin-bottom: 16px; }
-  .form-group label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
-  .form-group input {
-    width: 100%; padding: 12px 14px; background: #0f172a;
-    border: 1px solid #334155; border-radius: 8px; color: #f1f5f9;
-    font-size: 15px; outline: none; transition: border-color 0.2s;
-  }
+  .form-group label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-group input { width: 100%; padding: 11px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f1f5f9; font-size: 14px; outline: none; transition: border-color 0.2s; }
   .form-group input:focus { border-color: #3b82f6; }
-  .btn {
-    width: 100%; padding: 13px; border: none; border-radius: 8px;
-    font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s;
-  }
+
+  .btn { padding: 10px 18px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-full { width: 100%; }
   .btn-primary { background: #3b82f6; color: #fff; }
   .btn-primary:hover { background: #2563eb; }
-  .btn-primary:disabled { background: #1e40af; opacity: 0.6; cursor: not-allowed; }
-  .btn-danger { background: #ef4444; color: #fff; margin-top: 8px; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-danger { background: #ef4444; color: #fff; }
   .btn-danger:hover { background: #dc2626; }
-  .btn-sm { width: auto; padding: 8px 16px; font-size: 13px; }
+  .btn-secondary { background: #334155; color: #e2e8f0; }
+  .btn-secondary:hover { background: #475569; }
+  .btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #334155; }
+  .btn-ghost:hover { background: #1e293b; color: #e2e8f0; }
+  .btn-sm { padding: 7px 13px; font-size: 12px; }
+  .btn-xs { padding: 4px 9px; font-size: 11px; border-radius: 6px; }
+
   .error-msg { background: #450a0a; border: 1px solid #ef4444; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #fca5a5; margin-top: 12px; }
   .success-msg { background: #052e16; border: 1px solid #22c55e; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #86efac; margin-top: 12px; }
 
-  /* DASHBOARD */
-  #dashboard-page { display: none; padding: 0; }
-  .topbar {
-    background: #1e293b; padding: 16px 24px;
-    display: flex; align-items: center; justify-content: space-between;
-    border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 10;
-  }
-  .topbar h1 { font-size: 18px; font-weight: 700; color: #f8fafc; }
+  #dashboard-page { display: none; }
+  .topbar { background: #1e293b; padding: 13px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 10; }
+  .topbar-left { display: flex; align-items: center; gap: 10px; }
+  .topbar h1 { font-size: 16px; font-weight: 700; color: #f8fafc; }
+  .super-badge { font-size: 10px; background: #451a03; color: #fb923c; border: 1px solid #92400e; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
   .topbar-right { display: flex; gap: 10px; align-items: center; }
-  .user-badge { font-size: 12px; color: #94a3b8; background: #0f172a; padding: 6px 12px; border-radius: 20px; }
-  .logout-btn { background: #334155; color: #e2e8f0; border: none; padding: 7px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: background 0.2s; }
+  .user-badge { font-size: 12px; color: #94a3b8; background: #0f172a; padding: 5px 11px; border-radius: 20px; }
+  .logout-btn { background: #334155; color: #e2e8f0; border: none; padding: 7px 13px; border-radius: 8px; font-size: 12px; cursor: pointer; }
   .logout-btn:hover { background: #475569; }
 
-  .content { padding: 24px; max-width: 600px; margin: 0 auto; }
-  .section { background: #1e293b; border-radius: 14px; padding: 24px; margin-bottom: 20px; }
-  .section-title { font-size: 15px; font-weight: 600; color: #f1f5f9; margin-bottom: 6px; }
-  .section-sub { font-size: 12px; color: #64748b; margin-bottom: 20px; }
+  .layout { display: flex; min-height: calc(100vh - 50px); }
 
-  .config-item {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 0; border-bottom: 1px solid #0f172a;
-  }
+  .sidebar { width: 230px; flex-shrink: 0; background: #1e293b; border-right: 1px solid #334155; padding: 14px 10px; display: flex; flex-direction: column; gap: 4px; }
+  .sidebar-label { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.8px; padding: 4px 8px; font-weight: 600; }
+  .app-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 11px; border-radius: 8px; cursor: pointer; transition: background 0.15s; border: 1px solid transparent; }
+  .app-item:hover { background: #0f172a; }
+  .app-item.active { background: #0f172a; border-color: #3b82f6; }
+  .app-item-name { font-size: 13px; color: #cbd5e1; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+  .app-item.active .app-item-name { color: #f1f5f9; }
+  .app-item-actions { display: flex; gap: 3px; opacity: 0; flex-shrink: 0; }
+  .app-item:hover .app-item-actions { opacity: 1; }
+  .icon-btn { background: none; border: none; cursor: pointer; padding: 3px 4px; border-radius: 4px; font-size: 12px; transition: background 0.15s; }
+  .icon-btn:hover { background: #334155; }
+  .icon-btn.del:hover { background: #450a0a; }
+  .add-app-btn { margin-top: auto; padding-top: 10px; border-top: 1px solid #334155; }
+
+  .main { flex: 1; padding: 22px; overflow-y: auto; }
+  .content { max-width: 600px; margin: 0 auto; }
+
+  .section { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .section-title { font-size: 14px; font-weight: 600; color: #f1f5f9; margin-bottom: 3px; }
+  .section-sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+
+  .config-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #0f172a; }
   .config-item:last-child { border-bottom: none; padding-bottom: 0; }
   .config-item:first-child { padding-top: 0; }
-  .config-label { font-size: 14px; color: #cbd5e1; font-weight: 500; }
+  .config-label { font-size: 13px; color: #cbd5e1; font-weight: 500; }
   .config-key { font-size: 11px; color: #475569; margin-top: 2px; font-family: monospace; }
 
-  /* Toggle switch */
-  .toggle { position: relative; width: 48px; height: 26px; flex-shrink: 0; }
+  .toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
   .toggle input { opacity: 0; width: 0; height: 0; }
-  .slider {
-    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-    background: #334155; transition: 0.3s; border-radius: 26px;
-  }
-  .slider:before {
-    position: absolute; content: ""; height: 18px; width: 18px;
-    left: 4px; bottom: 4px; background: #94a3b8;
-    transition: 0.3s; border-radius: 50%;
-  }
+  .slider { position: absolute; cursor: pointer; inset: 0; background: #334155; transition: 0.3s; border-radius: 24px; }
+  .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background: #94a3b8; transition: 0.3s; border-radius: 50%; }
   .toggle input:checked + .slider { background: #3b82f6; }
-  .toggle input:checked + .slider:before { transform: translateX(22px); background: #fff; }
-  .toggle input:disabled + .slider { opacity: 0.5; cursor: not-allowed; }
+  .toggle input:checked + .slider:before { transform: translateX(20px); background: #fff; }
 
-  .master-item { background: #0f172a; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
-  .master-item .config-label { font-size: 15px; color: #f1f5f9; font-weight: 600; }
+  .master-item { background: #0f172a; border-radius: 10px; padding: 13px 15px; margin-bottom: 14px; }
+  .master-item .config-label { font-size: 14px; color: #f1f5f9; font-weight: 600; }
 
-  .pw-form .form-group { margin-bottom: 12px; }
-  .pw-form .form-group input { padding: 10px 12px; font-size: 14px; }
-  .save-bar { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+  .save-bar { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
   .save-bar button { flex: 1; }
   .saving-indicator { font-size: 12px; color: #94a3b8; display: none; }
 
-  .badge-on  { font-size: 10px; background: #052e16; color: #4ade80; border: 1px solid #166534; padding: 2px 7px; border-radius: 20px; }
-  .badge-off { font-size: 10px; background: #450a0a; color: #f87171; border: 1px solid #7f1d1d; padding: 2px 7px; border-radius: 20px; }
+  .pw-form .form-group { margin-bottom: 10px; }
+  .pw-form .form-group input { padding: 9px 12px; font-size: 13px; }
+
+  .api-url-box { background: #0f172a; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 11px; color: #38bdf8; word-break: break-all; }
+
+  /* Admin list */
+  .admin-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #0f172a; }
+  .admin-row:last-child { border-bottom: none; }
+  .admin-row:first-child { padding-top: 0; }
+  .admin-name { font-size: 13px; color: #cbd5e1; font-weight: 500; }
+  .admin-date { font-size: 11px; color: #475569; margin-top: 2px; }
+  .admin-actions { display: flex; gap: 6px; }
+  .no-admins { text-align: center; padding: 20px; color: #475569; font-size: 13px; }
+  .add-admin-form { background: #0f172a; border-radius: 10px; padding: 14px; margin-top: 14px; }
+  .add-admin-form .row { display: flex; gap: 8px; margin-top: 10px; }
+  .add-admin-form .row input { flex: 1; padding: 8px 11px; background: #1e293b; border: 1px solid #334155; border-radius: 7px; color: #f1f5f9; font-size: 13px; outline: none; }
+  .add-admin-form .row input:focus { border-color: #3b82f6; }
+
+  /* Modal */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal { background: #1e293b; border-radius: 14px; padding: 26px; width: 100%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .modal h2 { font-size: 15px; font-weight: 700; color: #f8fafc; margin-bottom: 14px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .modal-actions button { flex: 1; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: #475569; }
+  .empty-state p { font-size: 13px; margin-top: 8px; }
+
+  @media (max-width: 640px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #334155; flex-direction: row; flex-wrap: wrap; overflow-x: auto; }
+    .sidebar-label { display: none; }
+    .add-app-btn { margin-top: 0; padding-top: 0; border-top: none; }
+    .app-item-actions { opacity: 1; }
+  }
 </style>
 </head>
 <body>
 
-<!-- LOGIN PAGE -->
 <div id="login-page">
   <div class="login-card">
     <h1>🔐 Admin Login</h1>
-    <p>Dialog Box Control Panel</p>
+    <span class="subtitle">⚡ Super Admin</span>
     <div class="form-group">
       <label>Username</label>
       <input type="text" id="login-user" value="admin" autocomplete="username">
@@ -111,68 +138,71 @@
       <label>Password</label>
       <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
     </div>
-    <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Login</button>
+    <button class="btn btn-primary btn-full" id="login-btn" onclick="doLogin()">Login</button>
     <div id="login-err" style="display:none"></div>
   </div>
 </div>
 
-<!-- DASHBOARD PAGE -->
 <div id="dashboard-page">
   <div class="topbar">
-    <h1>📱 Dialog Control</h1>
+    <div class="topbar-left">
+      <h1>📱 Dialog Control</h1>
+      <span class="super-badge">SUPER ADMIN</span>
+    </div>
     <div class="topbar-right">
       <span class="user-badge" id="user-badge">admin</span>
       <button class="logout-btn" onclick="doLogout()">Logout</button>
     </div>
   </div>
 
-  <div class="content">
-    <!-- Master toggle -->
-    <div class="section">
-      <div class="section-title">Dialog Status</div>
-      <div class="section-sub">সম্পূর্ণ dialog চালু বা বন্ধ করুন</div>
-      <div id="master-container"></div>
-    </div>
-
-    <!-- Field toggles -->
-    <div class="section">
-      <div class="section-title">Dialog Fields</div>
-      <div class="section-sub">কোন কোন তথ্য দেখাবে সেটা নিয়ন্ত্রণ করুন</div>
-      <div id="fields-container"></div>
-      <div class="save-bar">
-        <button class="btn btn-primary" onclick="saveConfig()">💾 Save Changes</button>
-        <span class="saving-indicator" id="saving-txt">Saving...</span>
-      </div>
-      <div id="save-msg" style="display:none"></div>
-    </div>
-
-    <!-- Password change -->
-    <div class="section">
-      <div class="section-title">🔑 Password Change</div>
-      <div class="section-sub">Admin password পরিবর্তন করুন</div>
-      <div class="pw-form">
-        <div class="form-group">
-          <label>Current Password</label>
-          <input type="password" id="cur-pass" placeholder="Current password">
-        </div>
-        <div class="form-group">
-          <label>New Password</label>
-          <input type="password" id="new-pass" placeholder="New password (min 6 chars)">
-        </div>
-        <div class="form-group">
-          <label>Confirm New Password</label>
-          <input type="password" id="confirm-pass" placeholder="Repeat new password">
-        </div>
-        <button class="btn btn-danger btn-sm" onclick="changePassword()">Change Password</button>
-        <div id="pw-msg" style="display:none"></div>
+  <div class="layout">
+    <div class="sidebar" id="app-sidebar">
+      <div class="sidebar-label">Apps</div>
+      <div id="app-list"></div>
+      <div class="add-app-btn">
+        <button class="btn btn-secondary btn-sm" style="width:100%" onclick="openAddApp()">+ New App</button>
       </div>
     </div>
 
-    <!-- API Info -->
-    <div class="section">
-      <div class="section-title">📡 Android App Config URL</div>
-      <div class="section-sub">এই URL টা smali কোডে দিন যাতে app config fetch করতে পারে</div>
-      <div style="background:#0f172a;border-radius:8px;padding:14px;font-family:monospace;font-size:12px;color:#38bdf8;word-break:break-all;" id="config-url"></div>
+    <div class="main">
+      <div class="content" id="app-content">
+        <div class="empty-state">
+          <div style="font-size:38px">📱</div>
+          <p>বাম দিক থেকে একটি App সিলেক্ট করুন</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- App Name Modal -->
+<div id="app-modal" class="modal-backdrop" style="display:none">
+  <div class="modal">
+    <h2 id="modal-title">New App</h2>
+    <div class="form-group" style="margin-bottom:0">
+      <label>App Name</label>
+      <input type="text" id="modal-app-name" placeholder="যেমন: MyApp, BDTaka ...">
+    </div>
+    <div id="modal-err" style="display:none;margin-top:10px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modal-save-btn" onclick="saveApp()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="pw-modal" class="modal-backdrop" style="display:none">
+  <div class="modal">
+    <h2 id="pw-modal-title">Reset Password</h2>
+    <div class="form-group" style="margin-bottom:0">
+      <label>New Password</label>
+      <input type="password" id="pw-modal-input" placeholder="New password (min 4 chars)">
+    </div>
+    <div id="pw-modal-err" style="display:none;margin-top:10px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closePwModal()">Cancel</button>
+      <button class="btn btn-danger" id="pw-modal-btn" onclick="doResetPassword()">Reset</button>
     </div>
   </div>
 </div>
@@ -180,29 +210,25 @@
 <script>
 const BASE = window.location.origin + '/api';
 let TOKEN = localStorage.getItem('admin_token') || '';
-let configData = [];
+let apps = [], currentAppId = null, configData = [], appAdmins = [];
+let modalMode = null, renameTargetId = null;
+let pwModalTarget = null; // {appId, adminId}
 
-const FIELD_KEYS = [
-  'show_device_id','show_device_name','show_model','show_android',
-  'show_imei','show_last_url','show_ipv4','show_ipv6','show_ipv6_check'
-];
+const FIELD_KEYS = ['show_device_id','show_device_name','show_model','show_android','show_imei','show_last_url','show_ipv4','show_ipv6','show_ipv6_check'];
 
 function api(path, method = 'GET', body = null) {
   return fetch(BASE + path, {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {})
-    },
-    ...(body ? { body: JSON.stringify(body) } : {})
+    headers: { 'Content-Type': 'application/json', ...(TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {}) },
+    ...(body !== null ? { body: JSON.stringify(body) } : {})
   });
 }
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
 async function doLogin() {
   const btn = document.getElementById('login-btn');
   const errEl = document.getElementById('login-err');
-  btn.disabled = true; btn.textContent = 'Logging in...';
-  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Logging in...'; errEl.style.display = 'none';
   try {
     const r = await api('/admin/login', 'POST', {
       username: document.getElementById('login-user').value,
@@ -215,150 +241,325 @@ async function doLogin() {
     localStorage.setItem('admin_user', data.username);
     showDashboard(data.username);
   } catch (e) {
-    errEl.className = 'error-msg';
-    errEl.textContent = e.message;
-    errEl.style.display = 'block';
+    errEl.className = 'error-msg'; errEl.textContent = e.message; errEl.style.display = 'block';
   }
   btn.disabled = false; btn.textContent = 'Login';
 }
-
-document.getElementById('login-pass').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
-});
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
 function doLogout() {
-  TOKEN = '';
-  localStorage.removeItem('admin_token');
-  localStorage.removeItem('admin_user');
+  TOKEN = ''; localStorage.removeItem('admin_token'); localStorage.removeItem('admin_user'); localStorage.removeItem('last_app_id');
   document.getElementById('dashboard-page').style.display = 'none';
   document.getElementById('login-page').style.display = 'flex';
   document.getElementById('login-pass').value = '';
+  apps = []; currentAppId = null; configData = []; appAdmins = [];
 }
 
 function showDashboard(username) {
   document.getElementById('login-page').style.display = 'none';
   document.getElementById('dashboard-page').style.display = 'block';
   document.getElementById('user-badge').textContent = username || 'admin';
-  document.getElementById('config-url').textContent = window.location.origin + '/api/dialog/config';
-  loadConfig();
+  loadApps();
 }
 
-async function loadConfig() {
-  try {
-    const r = await api('/admin/config');
-    if (r.status === 401) { doLogout(); return; }
-    configData = await r.json();
-    renderConfig();
-  } catch {}
+// ── Apps ──────────────────────────────────────────────────────────────────────
+async function loadApps() {
+  const r = await api('/admin/apps');
+  if (r.status === 401) { doLogout(); return; }
+  apps = await r.json();
+  renderAppList();
+  const lastId = parseInt(localStorage.getItem('last_app_id'));
+  const target = apps.find(a => a.id === lastId) || apps[0];
+  if (target) selectApp(target.id);
 }
 
-function renderConfig() {
-  const master = configData.find(c => c.key === 'dialog_enabled');
-  const masterEl = document.getElementById('master-container');
-  if (master) {
-    masterEl.innerHTML = `
-      <div class="master-item config-item">
-        <div>
-          <div class="config-label">${master.label}</div>
-          <div class="config-key">${master.key}</div>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="toggle_${master.key}" ${master.enabled ? 'checked' : ''}
-            onchange="toggleMaster(this)">
-          <span class="slider"></span>
-        </label>
-      </div>`;
-  }
-
-  const fieldsEl = document.getElementById('fields-container');
-  const fields = configData.filter(c => FIELD_KEYS.includes(c.key));
-  fieldsEl.innerHTML = fields.map(c => `
-    <div class="config-item">
-      <div>
-        <div class="config-label">${c.label}</div>
-        <div class="config-key">${c.key}</div>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="toggle_${c.key}" ${c.enabled ? 'checked' : ''}>
-        <span class="slider"></span>
-      </label>
+function renderAppList() {
+  document.getElementById('app-list').innerHTML = apps.map(a => `
+    <div class="app-item ${a.id === currentAppId ? 'active' : ''}" onclick="selectApp(${a.id})">
+      <span class="app-item-name" title="${esc(a.name)}">${esc(a.name)}</span>
+      <span class="app-item-actions">
+        <button class="icon-btn" title="Rename" onclick="event.stopPropagation();openRename(${a.id},'${esc(a.name).replace(/'/g,"\\'")}')">✏️</button>
+        <button class="icon-btn del" title="Delete" onclick="event.stopPropagation();deleteApp(${a.id},'${esc(a.name).replace(/'/g,"\\'")}')">🗑️</button>
+      </span>
     </div>`).join('');
 }
 
+async function selectApp(id) {
+  currentAppId = id; localStorage.setItem('last_app_id', id);
+  renderAppList();
+  await Promise.all([loadConfig(), loadAdmins()]);
+  renderAppContent();
+}
+
+// ── Config ────────────────────────────────────────────────────────────────────
+async function loadConfig() {
+  const r = await api(`/admin/apps/${currentAppId}/config`);
+  if (r.status === 401) { doLogout(); return; }
+  configData = await r.json();
+}
+
+// ── App Admins ────────────────────────────────────────────────────────────────
+async function loadAdmins() {
+  const r = await api(`/admin/apps/${currentAppId}/admins`);
+  if (r.ok) appAdmins = await r.json();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderAppContent() {
+  const a = apps.find(x => x.id === currentAppId);
+  if (!a) return;
+  const configUrl = `${window.location.origin}/api/dialog/config/${a.api_key}`;
+  const panelUrl  = `${window.location.origin}/panel/${a.api_key}/`;
+  const master = configData.find(c => c.key === 'dialog_enabled');
+  const fields  = configData.filter(c => FIELD_KEYS.includes(c.key));
+
+  document.getElementById('app-content').innerHTML = `
+    <div style="margin-bottom:18px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div>
+        <h2 style="font-size:17px;font-weight:700;color:#f8fafc">${esc(a.name)}</h2>
+        <p style="font-size:11px;color:#64748b;margin-top:2px">App ID: ${a.id}</p>
+      </div>
+    </div>
+
+    <!-- Dialog Status -->
+    <div class="section">
+      <div class="section-title">Dialog Status</div>
+      <div class="section-sub">সম্পূর্ণ dialog চালু বা বন্ধ করুন</div>
+      ${master ? `
+      <div class="master-item config-item">
+        <div><div class="config-label">${esc(master.label)}</div><div class="config-key">${master.key}</div></div>
+        <label class="toggle"><input type="checkbox" id="toggle_dialog_enabled" ${master.enabled?'checked':''} onchange="toggleMaster(this)"><span class="slider"></span></label>
+      </div>` : ''}
+    </div>
+
+    <!-- Fields -->
+    <div class="section">
+      <div class="section-title">Dialog Fields</div>
+      <div class="section-sub">কোন তথ্য দেখাবে সেটা নিয়ন্ত্রণ করুন</div>
+      ${fields.map(c => `
+      <div class="config-item">
+        <div><div class="config-label">${esc(c.label)}</div><div class="config-key">${c.key}</div></div>
+        <label class="toggle"><input type="checkbox" id="toggle_${c.key}" ${c.enabled?'checked':''}><span class="slider"></span></label>
+      </div>`).join('')}
+      <div class="save-bar">
+        <button class="btn btn-primary" onclick="saveConfig()">💾 Save Changes</button>
+        <span class="saving-indicator" id="saving-txt">Saving...</span>
+      </div>
+      <div id="save-msg" style="display:none"></div>
+    </div>
+
+    <!-- App Admins -->
+    <div class="section">
+      <div class="section-title">👥 App Admins</div>
+      <div class="section-sub">এই অ্যাপের আলাদা admin তৈরি করুন — তারা শুধু এই অ্যাপ manage করতে পারবে</div>
+      <div id="admins-list">${renderAdminsList()}</div>
+      <div class="add-admin-form">
+        <div style="font-size:12px;color:#94a3b8;font-weight:600">নতুন Admin যোগ করুন</div>
+        <div class="row">
+          <input type="text" id="new-admin-user" placeholder="Username">
+          <input type="password" id="new-admin-pass" placeholder="Password (min 4)">
+          <button class="btn btn-primary btn-sm" onclick="addAdmin()">Add</button>
+        </div>
+        <div id="add-admin-msg" style="display:none;margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- Panel URL -->
+    <div class="section">
+      <div class="section-title">🖥️ App Admin Panel URL</div>
+      <div class="section-sub">এই URL টা app-এর admins কে দিন — তারা শুধু এই অ্যাপ দেখতে পাবে</div>
+      <div class="api-url-box" id="panel-url-box">${panelUrl}</div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="copyText('${panelUrl}', this)">📋 Copy Panel URL</button>
+    </div>
+
+    <!-- Android Config URL -->
+    <div class="section">
+      <div class="section-title">📡 Android Config URL</div>
+      <div class="section-sub">এই URL টা smali কোডের CONFIG_URL field-এ দিন</div>
+      <div class="api-url-box">${configUrl}</div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="copyText('${configUrl}', this)">📋 Copy Config URL</button>
+    </div>
+
+    <!-- Super Admin Password -->
+    <div class="section">
+      <div class="section-title">🔑 Super Admin Password</div>
+      <div class="section-sub">আপনার নিজের password পরিবর্তন করুন</div>
+      <div class="pw-form">
+        <div class="form-group"><label>Current Password</label><input type="password" id="cur-pass" placeholder="Current password"></div>
+        <div class="form-group"><label>New Password</label><input type="password" id="new-pass" placeholder="Min 6 chars"></div>
+        <div class="form-group"><label>Confirm</label><input type="password" id="confirm-pass" placeholder="Repeat new password"></div>
+        <button class="btn btn-danger btn-sm" onclick="changePassword()">Change Password</button>
+        <div id="pw-msg" style="display:none"></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminsList() {
+  if (!appAdmins.length) return '<div class="no-admins">এখনো কোনো admin নেই</div>';
+  return appAdmins.map(a => `
+    <div class="admin-row">
+      <div>
+        <div class="admin-name">👤 ${esc(a.username)}</div>
+        <div class="admin-date">${new Date(a.created_at).toLocaleDateString('bn-BD')}</div>
+      </div>
+      <div class="admin-actions">
+        <button class="btn btn-ghost btn-xs" onclick="openPwModal(${currentAppId},${a.id},'${esc(a.username).replace(/'/g,"\\'")}')">🔑 Reset PW</button>
+        <button class="btn btn-danger btn-xs" onclick="removeAdmin(${a.id},'${esc(a.username).replace(/'/g,"\\'")}')">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+async function addAdmin() {
+  const username = document.getElementById('new-admin-user').value.trim();
+  const password = document.getElementById('new-admin-pass').value;
+  const msgEl = document.getElementById('add-admin-msg');
+  msgEl.style.display = 'none';
+  if (!username || !password) { msgEl.className='error-msg'; msgEl.textContent='Username ও Password দিন।'; msgEl.style.display='block'; return; }
+  const r = await api(`/admin/apps/${currentAppId}/admins`, 'POST', { username, password });
+  const data = await r.json();
+  if (!r.ok) { msgEl.className='error-msg'; msgEl.textContent=data.error; msgEl.style.display='block'; return; }
+  appAdmins.push(data);
+  document.getElementById('new-admin-user').value = '';
+  document.getElementById('new-admin-pass').value = '';
+  document.getElementById('admins-list').innerHTML = renderAdminsList();
+  msgEl.className='success-msg'; msgEl.textContent=`✓ "${username}" admin হিসেবে যোগ হয়েছে!`; msgEl.style.display='block';
+  setTimeout(() => msgEl.style.display='none', 3000);
+}
+
+async function removeAdmin(adminId, username) {
+  if (!confirm(`"${username}" কে admin থেকে সরাবেন?`)) return;
+  const r = await api(`/admin/apps/${currentAppId}/admins/${adminId}`, 'DELETE');
+  if (r.ok) { appAdmins = appAdmins.filter(a => a.id !== adminId); document.getElementById('admins-list').innerHTML = renderAdminsList(); }
+}
+
+// Password reset modal
+function openPwModal(appId, adminId, username) {
+  pwModalTarget = { appId, adminId };
+  document.getElementById('pw-modal-title').textContent = `Reset: ${username}`;
+  document.getElementById('pw-modal-input').value = '';
+  document.getElementById('pw-modal-err').style.display = 'none';
+  document.getElementById('pw-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('pw-modal-input').focus(), 50);
+}
+function closePwModal() { document.getElementById('pw-modal').style.display = 'none'; }
+
+async function doResetPassword() {
+  const password = document.getElementById('pw-modal-input').value;
+  const errEl = document.getElementById('pw-modal-err');
+  const btn = document.getElementById('pw-modal-btn');
+  errEl.style.display = 'none';
+  if (!password || password.length < 4) { errEl.className='error-msg'; errEl.textContent='কমপক্ষে ৪ অক্ষর দিন।'; errEl.style.display='block'; return; }
+  btn.disabled = true;
+  const r = await api(`/admin/apps/${pwModalTarget.appId}/admins/${pwModalTarget.adminId}/password`, 'PUT', { password });
+  const data = await r.json();
+  btn.disabled = false;
+  if (!r.ok) { errEl.className='error-msg'; errEl.textContent=data.error; errEl.style.display='block'; return; }
+  closePwModal();
+}
+
+// ── Config actions ────────────────────────────────────────────────────────────
 function toggleMaster(el) {
   const on = el.checked;
-  FIELD_KEYS.forEach(k => {
-    const t = document.getElementById('toggle_' + k);
-    if (t) { t.checked = on; }
-  });
+  FIELD_KEYS.forEach(k => { const t = document.getElementById('toggle_'+k); if (t) t.checked = on; });
   saveConfig();
 }
 
 async function saveConfig() {
   const savingTxt = document.getElementById('saving-txt');
   const saveMsg = document.getElementById('save-msg');
-  savingTxt.style.display = 'inline';
-  saveMsg.style.display = 'none';
-
-  const updates = configData.map(c => ({
-    key: c.key,
-    enabled: (document.getElementById('toggle_' + c.key)?.checked) ?? c.enabled
-  }));
-
+  if (!savingTxt) return;
+  savingTxt.style.display = 'inline'; saveMsg.style.display = 'none';
+  const updates = configData.map(c => ({ key: c.key, enabled: document.getElementById('toggle_'+c.key)?.checked ?? c.enabled }));
   try {
-    const r = await api('/admin/config', 'PUT', updates);
+    const r = await api(`/admin/apps/${currentAppId}/config`, 'PUT', updates);
     if (r.status === 401) { doLogout(); return; }
     configData = await r.json();
-    saveMsg.className = 'success-msg';
-    saveMsg.textContent = '✓ Saved successfully!';
-  } catch {
-    saveMsg.className = 'error-msg';
-    saveMsg.textContent = 'Save failed. Try again.';
-  }
-  savingTxt.style.display = 'none';
-  saveMsg.style.display = 'block';
+    saveMsg.className = 'success-msg'; saveMsg.textContent = '✓ Saved!';
+  } catch { saveMsg.className = 'error-msg'; saveMsg.textContent = 'Save failed.'; }
+  savingTxt.style.display = 'none'; saveMsg.style.display = 'block';
   setTimeout(() => saveMsg.style.display = 'none', 3000);
 }
 
 async function changePassword() {
   const cur = document.getElementById('cur-pass').value;
-  const nw = document.getElementById('new-pass').value;
+  const nw  = document.getElementById('new-pass').value;
   const conf = document.getElementById('confirm-pass').value;
   const msgEl = document.getElementById('pw-msg');
   msgEl.style.display = 'none';
-
-  if (!cur || !nw || !conf) {
-    msgEl.className = 'error-msg'; msgEl.textContent = 'সব field পূরণ করুন।';
-    msgEl.style.display = 'block'; return;
-  }
-  if (nw !== conf) {
-    msgEl.className = 'error-msg'; msgEl.textContent = 'New password দুটো মিলছে না।';
-    msgEl.style.display = 'block'; return;
-  }
-  if (nw.length < 6) {
-    msgEl.className = 'error-msg'; msgEl.textContent = 'Password কমপক্ষে ৬ অক্ষর হতে হবে।';
-    msgEl.style.display = 'block'; return;
-  }
+  if (!cur||!nw||!conf) { msgEl.className='error-msg'; msgEl.textContent='সব field পূরণ করুন।'; msgEl.style.display='block'; return; }
+  if (nw !== conf) { msgEl.className='error-msg'; msgEl.textContent='Password মিলছে না।'; msgEl.style.display='block'; return; }
+  if (nw.length < 6) { msgEl.className='error-msg'; msgEl.textContent='কমপক্ষে ৬ অক্ষর।'; msgEl.style.display='block'; return; }
   try {
     const r = await api('/admin/password', 'PUT', { currentPassword: cur, newPassword: nw });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error);
-    msgEl.className = 'success-msg'; msgEl.textContent = '✓ Password সফলভাবে পরিবর্তন হয়েছে!';
-    document.getElementById('cur-pass').value = '';
-    document.getElementById('new-pass').value = '';
-    document.getElementById('confirm-pass').value = '';
-  } catch (e) {
-    msgEl.className = 'error-msg'; msgEl.textContent = e.message;
-  }
-  msgEl.style.display = 'block';
-  setTimeout(() => msgEl.style.display = 'none', 5000);
+    msgEl.className='success-msg'; msgEl.textContent='✓ Password পরিবর্তন হয়েছে!';
+    ['cur-pass','new-pass','confirm-pass'].forEach(id => document.getElementById(id).value='');
+  } catch (e) { msgEl.className='error-msg'; msgEl.textContent=e.message; }
+  msgEl.style.display='block'; setTimeout(() => msgEl.style.display='none', 5000);
 }
 
-// Auto-login if token exists
-if (TOKEN) {
-  const u = localStorage.getItem('admin_user') || 'admin';
-  showDashboard(u);
+// ── App modal ─────────────────────────────────────────────────────────────────
+function openAddApp() {
+  modalMode='add'; renameTargetId=null;
+  document.getElementById('modal-title').textContent='New App';
+  document.getElementById('modal-app-name').value='';
+  document.getElementById('modal-err').style.display='none';
+  document.getElementById('modal-save-btn').textContent='Create';
+  document.getElementById('app-modal').style.display='flex';
+  setTimeout(() => document.getElementById('modal-app-name').focus(), 50);
 }
+function openRename(id, name) {
+  modalMode='rename'; renameTargetId=id;
+  document.getElementById('modal-title').textContent='Rename App';
+  document.getElementById('modal-app-name').value=name;
+  document.getElementById('modal-err').style.display='none';
+  document.getElementById('modal-save-btn').textContent='Save';
+  document.getElementById('app-modal').style.display='flex';
+  setTimeout(() => document.getElementById('modal-app-name').focus(), 50);
+}
+function closeModal() { document.getElementById('app-modal').style.display='none'; }
+document.getElementById('modal-app-name').addEventListener('keydown', e => { if (e.key==='Enter') saveApp(); if (e.key==='Escape') closeModal(); });
+
+async function saveApp() {
+  const name = document.getElementById('modal-app-name').value.trim();
+  const errEl = document.getElementById('modal-err');
+  errEl.style.display='none';
+  if (!name) { errEl.className='error-msg'; errEl.textContent='নাম দিন।'; errEl.style.display='block'; return; }
+  const btn = document.getElementById('modal-save-btn'); btn.disabled=true;
+  try {
+    const r = modalMode==='add'
+      ? await api('/admin/apps','POST',{name})
+      : await api(`/admin/apps/${renameTargetId}`,'PUT',{name});
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    closeModal();
+    await loadApps();
+    if (modalMode==='add') selectApp(data.id);
+  } catch(e) { errEl.className='error-msg'; errEl.textContent=e.message; errEl.style.display='block'; }
+  btn.disabled=false;
+}
+
+async function deleteApp(id, name) {
+  if (!confirm(`"${name}" অ্যাপটি ডিলিট করবেন? সব config ও admin মুছে যাবে।`)) return;
+  const r = await api(`/admin/apps/${id}`,'DELETE');
+  const data = await r.json();
+  if (!r.ok) { alert(data.error); return; }
+  if (currentAppId===id) { currentAppId=null; document.getElementById('app-content').innerHTML='<div class="empty-state"><div style="font-size:38px">📱</div><p>বাম দিক থেকে একটি App সিলেক্ট করুন</p></div>'; }
+  await loadApps();
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent; btn.textContent='✓ Copied!';
+    setTimeout(() => btn.textContent=orig, 2000);
+  });
+}
+function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+if (TOKEN) { const u = localStorage.getItem('admin_user')||'admin'; showDashboard(u); }
 </script>
 </body>
 </html>
