@@ -121,6 +121,17 @@ async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_device_hits_hit_at ON device_hits(hit_at DESC);
   `);
 
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS flagged_ips (
+      id SERIAL PRIMARY KEY,
+      app_id INTEGER NOT NULL REFERENCES apps(id) ON DELETE CASCADE,
+      ip TEXT NOT NULL,
+      reason TEXT NOT NULL DEFAULT '',
+      flagged_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(app_id, ip)
+    )
+  `);
+
   const { rows: admins } = await db.query('SELECT id FROM admin_users LIMIT 1');
   if (admins.length === 0) {
     const hash = await bcrypt.hash('admin123', 10);
@@ -480,6 +491,34 @@ app.get('/api/admin/apps/:id/analytics/stream', (req, res, next) => {
 
 app.delete('/api/admin/apps/:id/analytics', requireSuperAuth, async (req, res) => {
   await db.query('DELETE FROM device_hits WHERE app_id = $1', [req.params.id]);
+  res.json({ success: true });
+});
+
+// ── Flagged IPs (super admin) ──────────────────────────────────────────────────
+app.get('/api/admin/apps/:id/flagged-ips', requireSuperAuth, async (req, res) => {
+  const { rows } = await db.query(
+    'SELECT id, ip, reason, flagged_at FROM flagged_ips WHERE app_id = $1 ORDER BY flagged_at DESC',
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.post('/api/admin/apps/:id/flagged-ips', requireSuperAuth, async (req, res) => {
+  const { ip, reason } = req.body;
+  if (!ip || !ip.trim()) return res.status(400).json({ error: 'IP required' });
+  try {
+    const { rows } = await db.query(
+      'INSERT INTO flagged_ips (app_id, ip, reason) VALUES ($1, $2, $3) ON CONFLICT (app_id, ip) DO UPDATE SET reason=$3, flagged_at=NOW() RETURNING id, ip, reason, flagged_at',
+      [req.params.id, ip.trim(), (reason || '').trim()]
+    );
+    res.json(rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/admin/apps/:id/flagged-ips/:ip', requireSuperAuth, async (req, res) => {
+  await db.query('DELETE FROM flagged_ips WHERE app_id = $1 AND ip = $2', [req.params.id, req.params.ip]);
   res.json({ success: true });
 });
 
