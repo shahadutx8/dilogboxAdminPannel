@@ -349,12 +349,14 @@ function renderAppList() {
 
 async function selectApp(id) {
   currentAppId = id; localStorage.setItem('last_app_id', id);
-  flaggedIps = [];
+  flaggedIps = []; ipv6RecordsData = []; deviceRecordsData = [];
   renderAppList();
   await Promise.all([loadConfig(), loadAdmins(), loadMessages()]);
   renderAppContent();
   loadAnalytics();
   loadFlaggedIps();
+  loadIPv6Records();
+  loadDeviceRecords();
   connectAnalyticsSSE(id);
 }
 
@@ -516,6 +518,26 @@ function renderAppContent() {
       <div class="section-sub">এই URL টা smali কোডের CONFIG_URL field-এ দিন</div>
       <div class="api-url-box">${configUrl}</div>
       <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="copyText('${configUrl}', this)">📋 Copy Config URL</button>
+    </div>
+
+    <!-- IPv6 Records -->
+    <div class="section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+        <div class="section-title">🌐 IPv6 Records</div>
+        <button class="btn btn-ghost btn-xs" onclick="clearAllIPv6()" style="font-size:10px;border-color:#7f1d1d;color:#f87171">🗑️ সব Clear</button>
+      </div>
+      <div class="section-sub">একই IPv6 দিয়ে যতবার connect হয়েছে — duplicate detection এখানে track হয়</div>
+      <div id="ipv6-records-list"><div style="text-align:center;padding:16px;color:#475569;font-size:13px">লোড হচ্ছে...</div></div>
+    </div>
+
+    <!-- Device ID Records -->
+    <div class="section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+        <div class="section-title">📱 Device ID Records</div>
+        <button class="btn btn-ghost btn-xs" onclick="clearAllDevices()" style="font-size:10px;border-color:#7f1d1d;color:#f87171">🗑️ সব Clear</button>
+      </div>
+      <div class="section-sub">একই Device ID দিয়ে যতবার connect হয়েছে — duplicate detection এখানে track হয়</div>
+      <div id="device-records-list"><div style="text-align:center;padding:16px;color:#475569;font-size:13px">লোড হচ্ছে...</div></div>
     </div>
 
     <!-- Super Admin Password -->
@@ -955,6 +977,88 @@ async function submitManualFlag() {
   document.getElementById('manual-flag-reason').value = '';
   msgEl.className='success-msg'; msgEl.textContent=`✓ "${ip}" flag করা হয়েছে!`; msgEl.style.display='block';
   setTimeout(() => { msgEl.style.display='none'; }, 3000);
+}
+
+// ── IPv6 Records ───────────────────────────────────────────────────────────────
+let ipv6RecordsData = [], deviceRecordsData = [];
+
+async function loadIPv6Records() {
+  try {
+    const r = await api(`/admin/apps/${currentAppId}/ipv6-records`);
+    if (!r.ok) return;
+    ipv6RecordsData = await r.json();
+    renderIPv6Records();
+  } catch {}
+}
+
+function renderIPv6Records() {
+  const el = document.getElementById('ipv6-records-list');
+  if (!el) return;
+  if (!ipv6RecordsData.length) {
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:#475569;font-size:13px">কোনো IPv6 record নেই</div>';
+    return;
+  }
+  el.innerHTML = ipv6RecordsData.map(r => {
+    const last = new Date(r.last_seen).toLocaleString('en', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #0f172a">
+      <span style="font-family:monospace;font-size:11px;color:#38bdf8;flex:1;word-break:break-all">${esc(r.ipv6)}</span>
+      <span style="font-size:11px;color:#f59e0b;white-space:nowrap;flex-shrink:0">×${r.hit_count}</span>
+      <span style="font-size:10px;color:#475569;white-space:nowrap;flex-shrink:0">${last}</span>
+      <button class="btn-unflag" onclick="deleteIPv6Record(${r.id})" style="flex-shrink:0">🗑️</button>
+    </div>`;
+  }).join('');
+}
+
+async function deleteIPv6Record(id) {
+  const r = await api(`/admin/apps/${currentAppId}/ipv6-records/${id}`, 'DELETE');
+  if (r.ok) { ipv6RecordsData = ipv6RecordsData.filter(x => x.id !== id); renderIPv6Records(); }
+}
+
+async function clearAllIPv6() {
+  if (!confirm('এই App-এর সব IPv6 records মুছে ফেলবেন?\nDuplicate detection নতুনভাবে শুরু হবে।')) return;
+  await Promise.all(ipv6RecordsData.map(r => api(`/admin/apps/${currentAppId}/ipv6-records/${r.id}`, 'DELETE')));
+  ipv6RecordsData = [];
+  renderIPv6Records();
+}
+
+// ── Device ID Records ──────────────────────────────────────────────────────────
+async function loadDeviceRecords() {
+  try {
+    const r = await api(`/admin/apps/${currentAppId}/device-records`);
+    if (!r.ok) return;
+    deviceRecordsData = await r.json();
+    renderDeviceRecords();
+  } catch {}
+}
+
+function renderDeviceRecords() {
+  const el = document.getElementById('device-records-list');
+  if (!el) return;
+  if (!deviceRecordsData.length) {
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:#475569;font-size:13px">কোনো Device ID record নেই</div>';
+    return;
+  }
+  el.innerHTML = deviceRecordsData.map(r => {
+    const last = new Date(r.last_seen).toLocaleString('en', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #0f172a">
+      <span style="font-family:monospace;font-size:11px;color:#a78bfa;flex:1;word-break:break-all">${esc(r.device_id)}</span>
+      <span style="font-size:11px;color:#f59e0b;white-space:nowrap;flex-shrink:0">×${r.hit_count}</span>
+      <span style="font-size:10px;color:#475569;white-space:nowrap;flex-shrink:0">${last}</span>
+      <button class="btn-unflag" onclick="deleteDeviceRecord(${r.id})" style="flex-shrink:0">🗑️</button>
+    </div>`;
+  }).join('');
+}
+
+async function deleteDeviceRecord(id) {
+  const r = await api(`/admin/apps/${currentAppId}/device-records/${id}`, 'DELETE');
+  if (r.ok) { deviceRecordsData = deviceRecordsData.filter(x => x.id !== id); renderDeviceRecords(); }
+}
+
+async function clearAllDevices() {
+  if (!confirm('এই App-এর সব Device ID records মুছে ফেলবেন?\nDuplicate detection নতুনভাবে শুরু হবে।')) return;
+  await Promise.all(deviceRecordsData.map(r => api(`/admin/apps/${currentAppId}/device-records/${r.id}`, 'DELETE')));
+  deviceRecordsData = [];
+  renderDeviceRecords();
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
