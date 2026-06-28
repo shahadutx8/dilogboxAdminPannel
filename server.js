@@ -22,6 +22,29 @@ function isCompleteIPv6(addr) {
   return addr.split(':').length === 8;    // ঠিক 8 গ্রুপ = সম্পূর্ণ
 }
 
+// IPv6 কে /64 prefix-এ normalize করে (প্রথম ৪ গ্রুপ)
+// মোবাইল নেটওয়ার্কে IPv6 শেষ ৪ গ্রুপ বদলায়, প্রথম ৪ গ্রুপ (network prefix) একই থাকে
+function normalizeIPv6Prefix(addr) {
+  if (!addr || !addr.includes(':')) return addr;
+  try {
+    // "::" compressed form expand করো
+    let expanded = addr;
+    if (addr.includes('::')) {
+      const sides = addr.split('::');
+      const left  = sides[0] ? sides[0].split(':') : [];
+      const right = sides[1] ? sides[1].split(':') : [];
+      const missing = 8 - left.length - right.length;
+      expanded = [...left, ...Array(missing).fill('0000'), ...right].join(':');
+    }
+    const groups = expanded.split(':');
+    if (groups.length < 4) return addr;
+    // প্রথম ৪ গ্রুপ নাও (/64 prefix)
+    return groups.slice(0, 4).map(g => g.padStart(4, '0')).join(':') + '::/64';
+  } catch {
+    return addr;
+  }
+}
+
 // HTTP connection থেকে IPv6 বের করে (x-forwarded-for বা remoteAddress)
 function extractConnectionIPv6(req) {
   const raw = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
@@ -756,11 +779,13 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
       config.fraud_message = flagRows[0].reason || 'প্রতারণামূলক অ্যাকাউন্ট ধরতে পারে';
     }
 
-    // ── IPv6 duplicate detection (full address দিয়ে match করে) ──────────────
+    // ── IPv6 duplicate detection (/64 prefix দিয়ে match করে) ────────────────
+    // মোবাইলে IPv6 শেষ ৪ গ্রুপ বদলায়, তাই /64 prefix দিয়ে track করা হয়
+    const ipv6Key = normalizeIPv6Prefix(ipv6Final);
     let ipv6Fraud = false;
-    if (ipv6Final) {
+    if (ipv6Key) {
       const { rows: v6Rows } = await db.query(
-        'SELECT id FROM ipv6_records WHERE app_id = $1 AND ipv6 = $2 LIMIT 1', [appId, ipv6Final]
+        'SELECT id FROM ipv6_records WHERE app_id = $1 AND ipv6 = $2 LIMIT 1', [appId, ipv6Key]
       );
       if (v6Rows.length) {
         ipv6Fraud = true;
@@ -768,12 +793,12 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
         config.ipv6_fraud_message = 'প্রতারণামূলক অ্যাকাউন্ট খোলা হয়েছে দয়া করে আইপি চেঞ্জ করুন';
         await db.query(
           'UPDATE ipv6_records SET hit_count = hit_count + 1, last_seen = NOW() WHERE app_id = $1 AND ipv6 = $2',
-          [appId, ipv6Final]
+          [appId, ipv6Key]
         );
       } else {
         await db.query(
           'INSERT INTO ipv6_records (app_id, ipv6) VALUES ($1, $2) ON CONFLICT (app_id, ipv6) DO UPDATE SET hit_count = ipv6_records.hit_count + 1, last_seen = NOW()',
-          [appId, ipv6Final]
+          [appId, ipv6Key]
         );
       }
     }
