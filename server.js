@@ -132,6 +132,33 @@ async function initDB() {
     )
   `);
 
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS ipv6_records (
+      id SERIAL PRIMARY KEY,
+      app_id INTEGER NOT NULL REFERENCES apps(id) ON DELETE CASCADE,
+      ipv6 TEXT NOT NULL,
+      hit_count INTEGER NOT NULL DEFAULT 1,
+      first_seen TIMESTAMPTZ DEFAULT NOW(),
+      last_seen TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(app_id, ipv6)
+    )
+  `);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS device_id_records (
+      id SERIAL PRIMARY KEY,
+      app_id INTEGER NOT NULL REFERENCES apps(id) ON DELETE CASCADE,
+      device_id TEXT NOT NULL,
+      hit_count INTEGER NOT NULL DEFAULT 1,
+      first_seen TIMESTAMPTZ DEFAULT NOW(),
+      last_seen TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(app_id, device_id)
+    )
+  `);
+
+  await db.query(`ALTER TABLE device_hits ADD COLUMN IF NOT EXISTS device_id TEXT NOT NULL DEFAULT ''`);
+  await db.query(`ALTER TABLE device_hits ADD COLUMN IF NOT EXISTS ipv6 TEXT NOT NULL DEFAULT ''`);
+
   const { rows: admins } = await db.query('SELECT id FROM admin_users LIMIT 1');
   if (admins.length === 0) {
     const hash = await bcrypt.hash('admin123', 10);
@@ -196,6 +223,9 @@ app.use('/api/admin-panel', express.static(path.join(__dirname, 'public', 'admin
 
 // Static: per-app admin panel
 app.use('/panel/:apiKey', express.static(path.join(__dirname, 'public', 'app-panel')));
+
+// Static: public read-only analytics view
+app.use('/view/:apiKey', express.static(path.join(__dirname, 'public', 'view')));
 
 // ── Super admin auth ──────────────────────────────────────────────────────────
 app.post('/api/admin/login', async (req, res) => {
@@ -483,6 +513,62 @@ app.delete('/api/panel/:apiKey/messages/:msgId', requireAppAuth, async (req, res
   res.json({ success: true });
 });
 
+// ── Panel: IPv6 Records ────────────────────────────────────────────────────────
+app.get('/api/panel/:apiKey/ipv6-records', requireAppAuth, async (req, res) => {
+  const { rows } = await db.query(
+    'SELECT id, ipv6, hit_count, first_seen, last_seen FROM ipv6_records WHERE app_id=$1 ORDER BY last_seen DESC',
+    [req.appId]
+  );
+  res.json(rows);
+});
+
+app.delete('/api/panel/:apiKey/ipv6-records/:recId', requireAppAuth, async (req, res) => {
+  await db.query('DELETE FROM ipv6_records WHERE id=$1 AND app_id=$2', [req.params.recId, req.appId]);
+  res.json({ success: true });
+});
+
+// ── Panel: Device ID Records ───────────────────────────────────────────────────
+app.get('/api/panel/:apiKey/device-records', requireAppAuth, async (req, res) => {
+  const { rows } = await db.query(
+    'SELECT id, device_id, hit_count, first_seen, last_seen FROM device_id_records WHERE app_id=$1 ORDER BY last_seen DESC',
+    [req.appId]
+  );
+  res.json(rows);
+});
+
+app.delete('/api/panel/:apiKey/device-records/:recId', requireAppAuth, async (req, res) => {
+  await db.query('DELETE FROM device_id_records WHERE id=$1 AND app_id=$2', [req.params.recId, req.appId]);
+  res.json({ success: true });
+});
+
+// ── Super admin: IPv6 Records ──────────────────────────────────────────────────
+app.get('/api/admin/apps/:id/ipv6-records', requireSuperAuth, async (req, res) => {
+  const { rows } = await db.query(
+    'SELECT id, ipv6, hit_count, first_seen, last_seen FROM ipv6_records WHERE app_id=$1 ORDER BY last_seen DESC',
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.delete('/api/admin/apps/:id/ipv6-records/:recId', requireSuperAuth, async (req, res) => {
+  await db.query('DELETE FROM ipv6_records WHERE id=$1 AND app_id=$2', [req.params.recId, req.params.id]);
+  res.json({ success: true });
+});
+
+// ── Super admin: Device ID Records ─────────────────────────────────────────────
+app.get('/api/admin/apps/:id/device-records', requireSuperAuth, async (req, res) => {
+  const { rows } = await db.query(
+    'SELECT id, device_id, hit_count, first_seen, last_seen FROM device_id_records WHERE app_id=$1 ORDER BY last_seen DESC',
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.delete('/api/admin/apps/:id/device-records/:recId', requireSuperAuth, async (req, res) => {
+  await db.query('DELETE FROM device_id_records WHERE id=$1 AND app_id=$2', [req.params.recId, req.params.id]);
+  res.json({ success: true });
+});
+
 // ── Messages CRUD (super admin) ───────────────────────────────────────────────
 app.get('/api/admin/apps/:id/messages', requireSuperAuth, async (req, res) => {
   const { rows } = await db.query(
@@ -632,35 +718,109 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
     const config = {};
     for (const row of rows) config[row.key] = row.enabled;
     const { rows: msgRows } = await db.query(
-      'SELECT message FROM dialog_messages WHERE app_id = $1 ORDER BY sort_order ASC, id ASC',
-      [appId]
+      'SELECT message FROM dialog_messages WHERE app_id = $1 ORDER BY sort_order ASC, id ASC', [appId]
     );
     config.messages = msgRows.map(r => r.message);
 
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || '';
     const ua = req.headers['user-agent'] || '';
+    const deviceId = (req.query.device_id || '').trim().slice(0, 128);
+    const ipv6Param = (req.query.ipv6 || '').trim().slice(0, 64);
 
+    // ── Flagged IP check ──────────────────────────────────────────────────────
     const { rows: flagRows } = await db.query(
-      'SELECT reason FROM flagged_ips WHERE app_id = $1 AND ip = $2 LIMIT 1',
-      [appId, ip]
+      'SELECT reason FROM flagged_ips WHERE app_id = $1 AND ip = $2 LIMIT 1', [appId, ip]
     );
     if (flagRows.length) {
       config.fraud_detected = true;
       config.fraud_message = flagRows[0].reason || 'প্রতারণামূলক অ্যাকাউন্ট ধরতে পারে';
     }
 
-    db.query('INSERT INTO device_hits (app_id, ip, user_agent) VALUES ($1, $2, $3) RETURNING id, ip, user_agent, hit_at',
-      [appId, ip, ua]
+    // ── IPv6 duplicate detection ──────────────────────────────────────────────
+    let ipv6Fraud = false;
+    if (ipv6Param) {
+      const { rows: v6Rows } = await db.query(
+        'SELECT id FROM ipv6_records WHERE app_id = $1 AND ipv6 = $2 LIMIT 1', [appId, ipv6Param]
+      );
+      if (v6Rows.length) {
+        ipv6Fraud = true;
+        config.ipv6_fraud = true;
+        config.ipv6_fraud_message = 'প্রতারণামূলক অ্যাকাউন্ট খোলা হয়েছে দয়া করে আইপি চেঞ্জ করুন';
+        await db.query(
+          'UPDATE ipv6_records SET hit_count = hit_count + 1, last_seen = NOW() WHERE app_id = $1 AND ipv6 = $2',
+          [appId, ipv6Param]
+        );
+      } else {
+        await db.query(
+          'INSERT INTO ipv6_records (app_id, ipv6) VALUES ($1, $2) ON CONFLICT (app_id, ipv6) DO UPDATE SET hit_count = ipv6_records.hit_count + 1, last_seen = NOW()',
+          [appId, ipv6Param]
+        );
+      }
+    }
+
+    // ── Device ID duplicate detection ─────────────────────────────────────────
+    let deviceDuplicate = false;
+    if (deviceId) {
+      const { rows: devRows } = await db.query(
+        'SELECT id FROM device_id_records WHERE app_id = $1 AND device_id = $2 LIMIT 1', [appId, deviceId]
+      );
+      if (devRows.length) {
+        deviceDuplicate = true;
+        config.device_duplicate = true;
+        config.device_duplicate_message = 'একই ডিভাইস পাওয়া গিয়েছে দয়া করে এইটাও চেন্জ করুন';
+        await db.query(
+          'UPDATE device_id_records SET hit_count = hit_count + 1, last_seen = NOW() WHERE app_id = $1 AND device_id = $2',
+          [appId, deviceId]
+        );
+      } else {
+        await db.query(
+          'INSERT INTO device_id_records (app_id, device_id) VALUES ($1, $2) ON CONFLICT (app_id, device_id) DO UPDATE SET hit_count = device_id_records.hit_count + 1, last_seen = NOW()',
+          [appId, deviceId]
+        );
+      }
+    }
+
+    // ── Record hit ────────────────────────────────────────────────────────────
+    db.query(
+      'INSERT INTO device_hits (app_id, ip, user_agent, device_id, ipv6) VALUES ($1, $2, $3, $4, $5) RETURNING id, ip, user_agent, device_id, ipv6, hit_at',
+      [appId, ip, ua, deviceId, ipv6Param]
     ).then(({ rows: hitRows }) => {
       if (hitRows.length) {
-        const hit = { ...hitRows[0], flagged: flagRows.length > 0 };
+        const hit = { ...hitRows[0], flagged: flagRows.length > 0, ipv6_fraud: ipv6Fraud, device_duplicate: deviceDuplicate };
         notifyAnalyticsClients(appId, hit);
       }
     }).catch(() => {});
 
     res.set('Cache-Control', 'no-store');
     res.json(config);
-  } catch { res.status(500).json({ error: 'Failed to fetch config' }); }
+  } catch (e) { res.status(500).json({ error: 'Failed to fetch config' }); }
+});
+
+// ── Public stats (read-only, no auth) ────────────────────────────────────────
+app.get('/api/public/:apiKey/stats', async (req, res) => {
+  try {
+    const { rows: appRows } = await db.query('SELECT id, name FROM apps WHERE api_key = $1', [req.params.apiKey]);
+    if (!appRows.length) return res.status(404).json({ error: 'App not found' });
+    const appId = appRows[0].id;
+    const [totalR, todayR, flaggedR, ipv6R, devR, hourlyR] = await Promise.all([
+      db.query('SELECT COUNT(*) AS n FROM device_hits WHERE app_id=$1', [appId]),
+      db.query("SELECT COUNT(*) AS n FROM device_hits WHERE app_id=$1 AND hit_at >= NOW()-INTERVAL '24 hours'", [appId]),
+      db.query('SELECT COUNT(*) AS n FROM flagged_ips WHERE app_id=$1', [appId]),
+      db.query('SELECT COUNT(*) AS n FROM ipv6_records WHERE app_id=$1', [appId]),
+      db.query('SELECT COUNT(*) AS n FROM device_id_records WHERE app_id=$1', [appId]),
+      db.query(`SELECT date_trunc('hour',hit_at) AS hour, COUNT(*) AS count FROM device_hits WHERE app_id=$1 AND hit_at>=NOW()-INTERVAL '24 hours' GROUP BY hour ORDER BY hour ASC`, [appId]),
+    ]);
+    res.set('Cache-Control', 'no-store');
+    res.json({
+      app_name: appRows[0].name,
+      total: parseInt(totalR.rows[0].n),
+      today: parseInt(todayR.rows[0].n),
+      flagged_ips: parseInt(flaggedR.rows[0].n),
+      ipv6_records: parseInt(ipv6R.rows[0].n),
+      device_records: parseInt(devR.rows[0].n),
+      hourly: hourlyR.rows,
+    });
+  } catch { res.status(500).json({ error: 'Failed' }); }
 });
 
 app.get('/api/healthz', (_req, res) => res.json({ status: 'ok' }));

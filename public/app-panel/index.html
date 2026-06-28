@@ -132,6 +132,18 @@
   .msg-add-form input { flex: 1; padding: 9px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f1f5f9; font-size: 13px; outline: none; }
   .msg-add-form input:focus { border-color: #3b82f6; }
   .no-messages { font-size: 12px; color: #475569; text-align: center; padding: 14px 0; }
+
+  /* ── Records ── */
+  .rec-row { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid #0f172a; font-size: 12px; flex-wrap: wrap; }
+  .rec-row:last-child { border-bottom: none; }
+  .rec-val { font-family: monospace; color: #f59e0b; font-weight: 600; flex: 1; min-width: 0; word-break: break-all; }
+  .rec-hits { font-size: 11px; color: #64748b; white-space: nowrap; }
+  .rec-time { font-size: 11px; color: #475569; white-space: nowrap; }
+  .no-records { font-size: 12px; color: #475569; text-align: center; padding: 14px 0; }
+  .rec-search { width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f1f5f9; font-size: 12px; outline: none; margin-bottom: 10px; }
+  .rec-search:focus { border-color: #3b82f6; }
+  .warn-badge { font-size: 9px; background: #f59e0b; color: #000; border-radius: 4px; padding: 1px 5px; font-weight: 700; margin-left: 4px; }
+  .duplicate-badge { font-size: 9px; background: #ef4444; color: #fff; border-radius: 4px; padding: 1px 5px; font-weight: 700; margin-left: 4px; }
 </style>
 </head>
 <body>
@@ -244,11 +256,36 @@
         <div id="msg-status" style="display:none;margin-top:10px;font-size:12px;padding:8px 12px;border-radius:6px"></div>
       </div>
 
+      <!-- IPv6 Records -->
+      <div class="section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+          <div class="section-title">🌐 IPv6 Records</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadIPv6Records()">↻ Refresh</button>
+        </div>
+        <div class="section-sub">প্রতিটি নতুন IPv6 এখানে সংরক্ষিত হয় — দ্বিতীয়বার দেখলে fraud সতর্কতা দেয়</div>
+        <input class="rec-search" type="text" placeholder="🔍 IPv6 খুঁজুন..." oninput="filterIPv6(this.value)" id="ipv6-search">
+        <div id="ipv6-records-container"><div class="no-records">Loading...</div></div>
+        <div style="margin-top:10px;font-size:11px;color:#475569" id="ipv6-count"></div>
+      </div>
+
+      <!-- Device ID Records -->
+      <div class="section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+          <div class="section-title">📱 Device ID Records</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadDeviceRecords()">↻ Refresh</button>
+        </div>
+        <div class="section-sub">প্রতিটি নতুন Device ID সংরক্ষিত — একই device দ্বিতীয়বার দেখলে duplicate সতর্কতা দেয়</div>
+        <input class="rec-search" type="text" placeholder="🔍 Device ID খুঁজুন..." oninput="filterDevices(this.value)" id="device-search">
+        <div id="device-records-container"><div class="no-records">Loading...</div></div>
+        <div style="margin-top:10px;font-size:11px;color:#475569" id="device-count"></div>
+      </div>
+
       <!-- Android Config URL -->
       <div class="section">
         <div class="section-title">📡 Android Config URL</div>
-        <div class="section-sub">Smali কোডের CONFIG_URL field-এ এই URL দিন</div>
+        <div class="section-sub">Smali কোডের CONFIG_URL field-এ এই URL দিন — device_id ও ipv6 query param যোগ করুন</div>
         <div class="api-url-box" id="config-url-box"></div>
+        <div style="margin-top:10px;background:#0f172a;border-radius:8px;padding:10px 12px;font-size:11px;color:#64748b;font-family:monospace;word-break:break-all" id="config-url-with-params"></div>
         <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="copyUrl()">📋 Copy URL</button>
       </div>
 
@@ -336,7 +373,7 @@ function doLogout() {
   document.getElementById('dashboard-page').style.display = 'none';
   document.getElementById('login-page').style.display = 'flex';
   document.getElementById('login-pass').value = '';
-  configData = []; flaggedIps = []; messages = [];
+  configData = []; flaggedIps = []; messages = []; ipv6Records = []; deviceRecords = [];
 }
 
 function showDashboard(username, appName) {
@@ -350,7 +387,11 @@ function showDashboard(username, appName) {
   loadAnalytics();
   loadFlaggedIps();
   loadMessages();
+  loadIPv6Records();
+  loadDeviceRecords();
   connectAnalyticsSSE();
+  const paramsEl = document.getElementById('config-url-with-params');
+  if (paramsEl) paramsEl.textContent = configUrl + '?device_id={DEVICE_ID}&ipv6={IPV6_ADDRESS}';
 }
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -675,6 +716,108 @@ function copyUrl() {
     const btn = event.target; btn.textContent = '✓ Copied!';
     setTimeout(() => btn.textContent = '📋 Copy URL', 2000);
   });
+}
+
+// ── IPv6 Records ──────────────────────────────────────────────────────────────
+let ipv6Records = [];
+
+async function loadIPv6Records() {
+  try {
+    const r = await api('/ipv6-records');
+    if (!r.ok) return;
+    ipv6Records = await r.json();
+    renderIPv6Records(ipv6Records);
+  } catch {}
+}
+
+function renderIPv6Records(list) {
+  const el = document.getElementById('ipv6-records-container');
+  const countEl = document.getElementById('ipv6-count');
+  if (!el) return;
+  if (countEl) countEl.textContent = list.length ? `মোট ${ipv6Records.length}টি রেকর্ড${list.length < ipv6Records.length ? ', দেখাচ্ছে '+list.length+'টি' : ''}` : '';
+  if (!list.length && !ipv6Records.length) {
+    el.innerHTML = '<div class="no-records">কোনো IPv6 record নেই — Android app ipv6 param পাঠালে এখানে সংরক্ষিত হবে</div>';
+    return;
+  }
+  if (!list.length) { el.innerHTML = '<div class="no-records">কোনো ফলাফল পাওয়া যায়নি</div>'; return; }
+  el.innerHTML = list.map(r => {
+    const t = new Date(r.last_seen);
+    const tStr = t.toLocaleDateString('en', { month: 'short', day: 'numeric' }) + ' ' + t.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const dupBadge = r.hit_count > 1 ? `<span class="duplicate-badge">×${r.hit_count} DUPLICATE</span>` : `<span class="warn-badge">NEW</span>`;
+    return `<div class="rec-row">
+      <span class="rec-val">${esc(r.ipv6)}${dupBadge}</span>
+      <span class="rec-hits">${r.hit_count} hit${r.hit_count>1?'s':''}</span>
+      <span class="rec-time">${tStr}</span>
+      <button class="btn-xs" style="background:#450a0a;color:#f87171;flex-shrink:0" onclick="deleteIPv6Record(${r.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function filterIPv6(q) {
+  const filtered = q.trim() ? ipv6Records.filter(r => r.ipv6.toLowerCase().includes(q.toLowerCase())) : ipv6Records;
+  renderIPv6Records(filtered);
+}
+
+async function deleteIPv6Record(id) {
+  if (!confirm('এই IPv6 record মুছবেন? পরের বার এই IPv6 আবার নতুন হিসেবে ধরা হবে।')) return;
+  const r = await api('/ipv6-records/' + id, 'DELETE');
+  if (r.ok) {
+    ipv6Records = ipv6Records.filter(rec => rec.id !== id);
+    renderIPv6Records(ipv6Records);
+    const s = document.getElementById('ipv6-search');
+    if (s && s.value) filterIPv6(s.value);
+  }
+}
+
+// ── Device ID Records ─────────────────────────────────────────────────────────
+let deviceRecords = [];
+
+async function loadDeviceRecords() {
+  try {
+    const r = await api('/device-records');
+    if (!r.ok) return;
+    deviceRecords = await r.json();
+    renderDeviceRecords(deviceRecords);
+  } catch {}
+}
+
+function renderDeviceRecords(list) {
+  const el = document.getElementById('device-records-container');
+  const countEl = document.getElementById('device-count');
+  if (!el) return;
+  if (countEl) countEl.textContent = list.length ? `মোট ${deviceRecords.length}টি রেকর্ড${list.length < deviceRecords.length ? ', দেখাচ্ছে '+list.length+'টি' : ''}` : '';
+  if (!list.length && !deviceRecords.length) {
+    el.innerHTML = '<div class="no-records">কোনো Device ID record নেই — Android app device_id param পাঠালে এখানে সংরক্ষিত হবে</div>';
+    return;
+  }
+  if (!list.length) { el.innerHTML = '<div class="no-records">কোনো ফলাফল পাওয়া যায়নি</div>'; return; }
+  el.innerHTML = list.map(r => {
+    const t = new Date(r.last_seen);
+    const tStr = t.toLocaleDateString('en', { month: 'short', day: 'numeric' }) + ' ' + t.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const dupBadge = r.hit_count > 1 ? `<span class="duplicate-badge">×${r.hit_count} SAME DEVICE</span>` : `<span class="warn-badge">NEW</span>`;
+    return `<div class="rec-row">
+      <span class="rec-val">${esc(r.device_id)}${dupBadge}</span>
+      <span class="rec-hits">${r.hit_count} hit${r.hit_count>1?'s':''}</span>
+      <span class="rec-time">${tStr}</span>
+      <button class="btn-xs" style="background:#450a0a;color:#f87171;flex-shrink:0" onclick="deleteDeviceRecord(${r.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function filterDevices(q) {
+  const filtered = q.trim() ? deviceRecords.filter(r => r.device_id.toLowerCase().includes(q.toLowerCase())) : deviceRecords;
+  renderDeviceRecords(filtered);
+}
+
+async function deleteDeviceRecord(id) {
+  if (!confirm('এই Device ID record মুছবেন? পরের বার এই device আবার নতুন হিসেবে ধরা হবে।')) return;
+  const r = await api('/device-records/' + id, 'DELETE');
+  if (r.ok) {
+    deviceRecords = deviceRecords.filter(rec => rec.id !== id);
+    renderDeviceRecords(deviceRecords);
+    const s = document.getElementById('device-search');
+    if (s && s.value) filterDevices(s.value);
+  }
 }
 
 // ── Auto-login ────────────────────────────────────────────────────────────────
