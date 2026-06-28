@@ -6,3 +6,9 @@ id = "0TglQdkBYlzRHRVY9kleD"
 uri = "file://ip_lookup_dialog_v11_fraud_detection.zip"
 type = "unspecified"
 title = "ip_lookup_dialog_v11_fraud_detection.zip — সব feature সহ"
+
+[[outputs]]
+id = "HaoRQDpUV6PTMlFmbSf_d"
+uri = "file://attached_assets/ip_lookup_dialog_v12_ipv6_fixed.zip"
+type = "unspecified"
+title = "ip_lookup_dialog_v12_ipv6_fixed.zip"
