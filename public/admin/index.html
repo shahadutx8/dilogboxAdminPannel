@@ -533,7 +533,7 @@ function renderAppContent() {
           <div style="font-size:13px;color:#cbd5e1;font-weight:500">নতুন IPv6 Record করো</div>
           <div style="font-size:11px;color:#475569;margin-top:2px">Off করলে নতুন device আর record হবে না, পুরনো duplicate check কাজ করবে</div>
         </div>
-        <label class="toggle-switch" id="ipv6-tracking-toggle-wrap">
+        <label class="toggle">
           <input type="checkbox" id="ipv6-tracking-toggle" checked onchange="toggleTracking('ipv6_tracking_enabled', this.checked)">
           <span class="slider"></span>
         </label>
@@ -553,7 +553,7 @@ function renderAppContent() {
           <div style="font-size:13px;color:#cbd5e1;font-weight:500">নতুন Device ID Record করো</div>
           <div style="font-size:11px;color:#475569;margin-top:2px">Off করলে নতুন device আর record হবে না, পুরনো duplicate check কাজ করবে</div>
         </div>
-        <label class="toggle-switch" id="device-tracking-toggle-wrap">
+        <label class="toggle">
           <input type="checkbox" id="device-tracking-toggle" checked onchange="toggleTracking('device_tracking_enabled', this.checked)">
           <span class="slider"></span>
         </label>
