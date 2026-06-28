@@ -259,11 +259,11 @@
       <!-- IPv6 Records -->
       <div class="section">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
-          <div class="section-title">🌐 IPv6 Records</div>
+          <div class="section-title">🌐 IPv6 Records <span style="font-size:11px;font-weight:normal;color:#64748b;background:#1e293b;padding:2px 6px;border-radius:4px;margin-left:4px">/64 Prefix</span></div>
           <button class="btn btn-ghost btn-sm" onclick="loadIPv6Records()">↻ Refresh</button>
         </div>
-        <div class="section-sub">প্রতিটি নতুন IPv6 এখানে সংরক্ষিত হয় — দ্বিতীয়বার দেখলে fraud সতর্কতা দেয়</div>
-        <input class="rec-search" type="text" placeholder="🔍 IPv6 খুঁজুন..." oninput="filterIPv6(this.value)" id="ipv6-search">
+        <div class="section-sub">IPv6-এর প্রথম ৪ গ্রুপ (/64 prefix) সংরক্ষিত হয় — একই নেটওয়ার্ক থেকে দ্বিতীয়বার এলে fraud সতর্কতা দেয়। (Android বারবার নতুন IPv6 বানায়, তাই prefix দিয়ে track করা হয়)</div>
+        <input class="rec-search" type="text" placeholder="🔍 IPv6 Prefix খুঁজুন..." oninput="filterIPv6(this.value)" id="ipv6-search">
         <div id="ipv6-records-container"><div class="no-records">Loading...</div></div>
         <div style="margin-top:10px;font-size:11px;color:#475569" id="ipv6-count"></div>
       </div>
