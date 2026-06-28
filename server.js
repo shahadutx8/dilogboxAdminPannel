@@ -791,6 +791,11 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
         ipv6Fraud = true;
         config.ipv6_fraud = true;
         config.ipv6_fraud_message = 'প্রতারণামূলক অ্যাকাউন্ট খোলা হয়েছে দয়া করে আইপি চেঞ্জ করুন';
+        // Smali শুধু fraud_detected:true চেনে — তাই এটাও সেট করো
+        if (!config.fraud_detected) {
+          config.fraud_detected = true;
+          config.fraud_message = 'প্রতারণামূলক অ্যাকাউন্ট খোলা হয়েছে দয়া করে আইপি চেঞ্জ করুন';
+        }
         await db.query(
           'UPDATE ipv6_records SET hit_count = hit_count + 1, last_seen = NOW() WHERE app_id = $1 AND ipv6 = $2',
           [appId, ipv6Key]
@@ -813,6 +818,11 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
         deviceDuplicate = true;
         config.device_duplicate = true;
         config.device_duplicate_message = 'একই ডিভাইস পাওয়া গিয়েছে দয়া করে এইটাও চেন্জ করুন';
+        // Smali শুধু fraud_detected:true চেনে — তাই এটাও সেট করো
+        if (!config.fraud_detected) {
+          config.fraud_detected = true;
+          config.fraud_message = 'একই ডিভাইস পাওয়া গিয়েছে দয়া করে এইটাও চেন্জ করুন';
+        }
         await db.query(
           'UPDATE device_id_records SET hit_count = hit_count + 1, last_seen = NOW() WHERE app_id = $1 AND device_id = $2',
           [appId, deviceId]
