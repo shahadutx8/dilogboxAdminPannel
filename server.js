@@ -15,15 +15,21 @@ const pool   = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const db = { query: (text, params) => pool.query(text, params) };
 
-// IPv6 /64 prefix extractor — শেষের ৪ গ্রুপ বাদ দিয়ে প্রথম ৪ গ্রুপ নেয়
-// উদাহরণ: "2400:c600:5419:a055:145d:bfff:fe5c:7bc" → "2400:c600:5419:a055"
-function getIPv6Prefix(ipv6) {
-  if (!ipv6) return '';
-  const trimmed = ipv6.trim().toLowerCase();
-  // :: expansion: split করে প্রথম ৪ গ্রুপ নাও
-  const parts = trimmed.split(':');
-  if (parts.length >= 4) return parts.slice(0, 4).join(':');
-  return trimmed; // fallback (অসম্পূর্ণ IPv6 হলে যা আছে তাই রাখো)
+// IPv6 পুরো address কিনা চেক করে (8 গ্রুপ বা "::" compressed form)
+function isCompleteIPv6(addr) {
+  if (!addr) return false;
+  if (addr.includes('::')) return true;   // compressed "::" form সম্পূর্ণ
+  return addr.split(':').length === 8;    // ঠিক 8 গ্রুপ = সম্পূর্ণ
+}
+
+// HTTP connection থেকে IPv6 বের করে (x-forwarded-for বা remoteAddress)
+function extractConnectionIPv6(req) {
+  const raw = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+  for (const segment of raw.split(',')) {
+    const addr = segment.trim().replace(/^\[|\]$/g, ''); // [::1] → ::1
+    if (addr.includes(':') && addr.split(':').length >= 3) return addr;
+  }
+  return '';
 }
 
 const DEFAULT_FIELDS = [
@@ -736,7 +742,10 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || '';
     const ua = req.headers['user-agent'] || '';
     const deviceId = (req.query.device_id || '').trim().slice(0, 128);
-    const ipv6Param = (req.query.ipv6 || '').trim().slice(0, 128); // full address — display ও record উভয়ের জন্য
+    const ipv6Param = (req.query.ipv6 || '').trim().slice(0, 128);
+    // ipv6Param incomplete হলে (< 8 গ্রুপ) connection-এর actual IPv6 ব্যবহার করো
+    const connIPv6   = extractConnectionIPv6(req);
+    const ipv6Final  = isCompleteIPv6(ipv6Param) ? ipv6Param : (connIPv6 || ipv6Param);
 
     // ── Flagged IP check ──────────────────────────────────────────────────────
     const { rows: flagRows } = await db.query(
@@ -749,9 +758,9 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
 
     // ── IPv6 duplicate detection (full address দিয়ে match করে) ──────────────
     let ipv6Fraud = false;
-    if (ipv6Param) {
+    if (ipv6Final) {
       const { rows: v6Rows } = await db.query(
-        'SELECT id FROM ipv6_records WHERE app_id = $1 AND ipv6 = $2 LIMIT 1', [appId, ipv6Param]
+        'SELECT id FROM ipv6_records WHERE app_id = $1 AND ipv6 = $2 LIMIT 1', [appId, ipv6Final]
       );
       if (v6Rows.length) {
         ipv6Fraud = true;
@@ -759,12 +768,12 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
         config.ipv6_fraud_message = 'প্রতারণামূলক অ্যাকাউন্ট খোলা হয়েছে দয়া করে আইপি চেঞ্জ করুন';
         await db.query(
           'UPDATE ipv6_records SET hit_count = hit_count + 1, last_seen = NOW() WHERE app_id = $1 AND ipv6 = $2',
-          [appId, ipv6Param]
+          [appId, ipv6Final]
         );
       } else {
         await db.query(
           'INSERT INTO ipv6_records (app_id, ipv6) VALUES ($1, $2) ON CONFLICT (app_id, ipv6) DO UPDATE SET hit_count = ipv6_records.hit_count + 1, last_seen = NOW()',
-          [appId, ipv6Param]
+          [appId, ipv6Final]
         );
       }
     }
@@ -794,7 +803,7 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
     // ── Record hit ────────────────────────────────────────────────────────────
     db.query(
       'INSERT INTO device_hits (app_id, ip, user_agent, device_id, ipv6) VALUES ($1, $2, $3, $4, $5) RETURNING id, ip, user_agent, device_id, ipv6, hit_at',
-      [appId, ip, ua, deviceId, ipv6Param]
+      [appId, ip, ua, deviceId, ipv6Final]
     ).then(({ rows: hitRows }) => {
       if (hitRows.length) {
         const hit = { ...hitRows[0], flagged: flagRows.length > 0, ipv6_fraud: ipv6Fraud, device_duplicate: deviceDuplicate };
