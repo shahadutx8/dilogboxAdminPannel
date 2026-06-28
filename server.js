@@ -34,17 +34,19 @@ function extractConnectionIPv6(req) {
 }
 
 const DEFAULT_FIELDS = [
-  ['dialog_enabled',      true,  'সম্পূর্ণ Dialog চালু'],
-  ['hide_when_offline',   false, 'Server Offline হলে Dialog লুকাও'],
-  ['show_device_id',      true,  'Device ID'],
-  ['show_device_name',    true,  'Device Name'],
-  ['show_model',          true,  'Model'],
-  ['show_android',        true,  'Android Version'],
-  ['show_imei',           true,  'IMEI'],
-  ['show_last_url',       true,  'Last URL'],
-  ['show_ipv4',           true,  'IPv4'],
-  ['show_ipv6',           true,  'IPv6'],
-  ['show_ipv6_check',     true,  'IPv6 Check (Withdrawal)'],
+  ['dialog_enabled',         true,  'সম্পূর্ণ Dialog চালু'],
+  ['hide_when_offline',      false, 'Server Offline হলে Dialog লুকাও'],
+  ['show_device_id',         true,  'Device ID'],
+  ['show_device_name',       true,  'Device Name'],
+  ['show_model',             true,  'Model'],
+  ['show_android',           true,  'Android Version'],
+  ['show_imei',              true,  'IMEI'],
+  ['show_last_url',          true,  'Last URL'],
+  ['show_ipv4',              true,  'IPv4'],
+  ['show_ipv6',              true,  'IPv6'],
+  ['show_ipv6_check',        true,  'IPv6 Check (Withdrawal)'],
+  ['ipv6_tracking_enabled',  true,  'IPv6 Duplicate Tracking (নতুন device record করো)'],
+  ['device_tracking_enabled',true,  'Device ID Duplicate Tracking (নতুন device record করো)'],
 ];
 
 async function seedAppConfig(appId) {
@@ -757,9 +759,15 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
       config.fraud_message = flagRows[0].reason || 'প্রতারণামূলক অ্যাকাউন্ট ধরতে পারে';
     }
 
+    // ── Admin-only tracking flags (Android-এ পাঠানো যাবে না) ─────────────────
+    const ipv6TrackingOn  = config.ipv6_tracking_enabled  !== false;
+    const devTrackingOn   = config.device_tracking_enabled !== false;
+    delete config.ipv6_tracking_enabled;
+    delete config.device_tracking_enabled;
+
     // ── IPv6 duplicate detection (full address দিয়ে match করে) ──────────────
     let ipv6Fraud = false;
-    if (ipv6Final) {
+    if (ipv6Final && ipv6TrackingOn) {
       const { rows: v6Rows } = await db.query(
         'SELECT id FROM ipv6_records WHERE app_id = $1 AND ipv6 = $2 LIMIT 1', [appId, ipv6Final]
       );
@@ -782,11 +790,30 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
           [appId, ipv6Final]
         );
       }
+    } else if (ipv6Final && !ipv6TrackingOn) {
+      // Tracking বন্ধ — শুধু existing duplicate check করো, নতুন record করো না
+      const { rows: v6Rows } = await db.query(
+        'SELECT id FROM ipv6_records WHERE app_id = $1 AND ipv6 = $2 LIMIT 1', [appId, ipv6Final]
+      );
+      if (v6Rows.length) {
+        ipv6Fraud = true;
+        config.ipv6_fraud = true;
+        config.ipv6_fraud_message = 'প্রতারণামূলক অ্যাকাউন্ট খোলা হয়েছে দয়া করে আইপি চেঞ্জ করুন';
+        if (!config.fraud_detected) {
+          config.fraud_detected = true;
+          config.fraud_message = 'প্রতারণামূলক অ্যাকাউন্ট খোলা হয়েছে দয়া করে আইপি চেঞ্জ করুন';
+        }
+        await db.query(
+          'UPDATE ipv6_records SET hit_count = hit_count + 1, last_seen = NOW() WHERE app_id = $1 AND ipv6 = $2',
+          [appId, ipv6Final]
+        );
+      }
+      // নতুন IPv6 record করা হবে না
     }
 
     // ── Device ID duplicate detection ─────────────────────────────────────────
     let deviceDuplicate = false;
-    if (deviceId) {
+    if (deviceId && devTrackingOn) {
       const { rows: devRows } = await db.query(
         'SELECT id FROM device_id_records WHERE app_id = $1 AND device_id = $2 LIMIT 1', [appId, deviceId]
       );
@@ -809,6 +836,25 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
           [appId, deviceId]
         );
       }
+    } else if (deviceId && !devTrackingOn) {
+      // Tracking বন্ধ — শুধু existing duplicate check করো, নতুন record করো না
+      const { rows: devRows } = await db.query(
+        'SELECT id FROM device_id_records WHERE app_id = $1 AND device_id = $2 LIMIT 1', [appId, deviceId]
+      );
+      if (devRows.length) {
+        deviceDuplicate = true;
+        config.device_duplicate = true;
+        config.device_duplicate_message = 'একই ডিভাইস পাওয়া গিয়েছে দয়া করে এইটাও চেন্জ করুন';
+        if (!config.fraud_detected) {
+          config.fraud_detected = true;
+          config.fraud_message = 'একই ডিভাইস পাওয়া গিয়েছে দয়া করে এইটাও চেন্জ করুন';
+        }
+        await db.query(
+          'UPDATE device_id_records SET hit_count = hit_count + 1, last_seen = NOW() WHERE app_id = $1 AND device_id = $2',
+          [appId, deviceId]
+        );
+      }
+      // নতুন Device ID record করা হবে না
     }
 
     // ── Record hit ────────────────────────────────────────────────────────────
