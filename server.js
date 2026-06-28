@@ -736,8 +736,7 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || '';
     const ua = req.headers['user-agent'] || '';
     const deviceId = (req.query.device_id || '').trim().slice(0, 128);
-    const ipv6Param = (req.query.ipv6 || '').trim().slice(0, 128); // full address — display-এর জন্য
-    const ipv6Prefix = getIPv6Prefix(ipv6Param);                   // /64 prefix — matching-এর জন্য
+    const ipv6Param = (req.query.ipv6 || '').trim().slice(0, 128); // full address — display ও record উভয়ের জন্য
 
     // ── Flagged IP check ──────────────────────────────────────────────────────
     const { rows: flagRows } = await db.query(
@@ -748,13 +747,11 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
       config.fraud_message = flagRows[0].reason || 'প্রতারণামূলক অ্যাকাউন্ট ধরতে পারে';
     }
 
-    // ── IPv6 duplicate detection (/64 prefix দিয়ে match করে) ─────────────────
-    // একই device বারবার নতুন IPv6 বানায় (Privacy Extensions), তাই
-    // শুধু প্রথম ৪ গ্রুপ (/64 prefix) দিয়ে track করা হয়।
+    // ── IPv6 duplicate detection (full address দিয়ে match করে) ──────────────
     let ipv6Fraud = false;
-    if (ipv6Prefix) {
+    if (ipv6Param) {
       const { rows: v6Rows } = await db.query(
-        'SELECT id FROM ipv6_records WHERE app_id = $1 AND ipv6 = $2 LIMIT 1', [appId, ipv6Prefix]
+        'SELECT id FROM ipv6_records WHERE app_id = $1 AND ipv6 = $2 LIMIT 1', [appId, ipv6Param]
       );
       if (v6Rows.length) {
         ipv6Fraud = true;
@@ -762,12 +759,12 @@ app.get('/api/dialog/config/:apiKey', async (req, res) => {
         config.ipv6_fraud_message = 'প্রতারণামূলক অ্যাকাউন্ট খোলা হয়েছে দয়া করে আইপি চেঞ্জ করুন';
         await db.query(
           'UPDATE ipv6_records SET hit_count = hit_count + 1, last_seen = NOW() WHERE app_id = $1 AND ipv6 = $2',
-          [appId, ipv6Prefix]
+          [appId, ipv6Param]
         );
       } else {
         await db.query(
           'INSERT INTO ipv6_records (app_id, ipv6) VALUES ($1, $2) ON CONFLICT (app_id, ipv6) DO UPDATE SET hit_count = ipv6_records.hit_count + 1, last_seen = NOW()',
-          [appId, ipv6Prefix]
+          [appId, ipv6Param]
         );
       }
     }
