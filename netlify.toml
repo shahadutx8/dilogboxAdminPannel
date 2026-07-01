@@ -1,0 +1,37 @@
+[build]
+  publish = "public"
+
+# Edge function handles /api/* proxy to Render (see netlify/edge-functions/api-proxy.js)
+# Set RENDER_URL in Netlify dashboard → Site configuration → Environment variables
+# Example: RENDER_URL = https://my-app.onrender.com
+
+[[edge_functions]]
+  path = "/api/*"
+  function = "api-proxy"
+
+# ── Static page rewrites ──────────────────────────────────────────────────────
+
+# Super admin panel → public/admin/index.html
+[[redirects]]
+  from = "/api/admin-panel"
+  to = "/admin/index.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/api/admin-panel/"
+  to = "/admin/index.html"
+  status = 200
+  force = false
+
+# App-specific panel (dynamic apiKey in URL)
+[[redirects]]
+  from = "/panel/*"
+  to = "/app-panel/index.html"
+  status = 200
+
+# Public read-only view (dynamic apiKey in URL)
+[[redirects]]
+  from = "/view/*"
+  to = "/view/index.html"
+  status = 200
